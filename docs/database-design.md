@@ -215,3 +215,86 @@ Phase 6+:
     billing_bill, billing_payment
     inventory_*, accounting_*
 ```
+
+---
+
+## Phase 3 Schema
+
+### New Tables
+
+#### `accounts_permission`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID PK | |
+| code | varchar(100) unique | e.g. `restaurant.view` |
+| name | varchar(150) | Human-readable |
+| module | varchar(50) | e.g. `restaurant` |
+| action | varchar(50) | e.g. `view` |
+| is_active | bool | default True |
+| created_at | timestamptz | auto |
+| updated_at | timestamptz | auto |
+
+#### `accounts_role`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID PK | |
+| code | varchar(50) unique | e.g. `COMPANY_HEAD` |
+| name | varchar(100) | |
+| description | text | |
+| scope | varchar(20) | organization / restaurant / branch |
+| is_system_role | bool | protected from deletion |
+| is_active | bool | |
+| created_at | timestamptz | auto |
+| updated_at | timestamptz | auto |
+
+#### `accounts_role_permissions` (M2M)
+
+| Column | Type |
+|--------|------|
+| role_id | UUID FK → accounts_role |
+| permission_id | UUID FK → accounts_permission |
+
+#### `accounts_userprofile`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID PK | |
+| user_id | bigint FK → accounts_user (CASCADE) | OneToOne |
+| display_name | varchar(150) | |
+| employee_code | varchar(50) indexed | |
+| profile_photo | image path | nullable |
+| is_active | bool | |
+| created_at | timestamptz | auto |
+| updated_at | timestamptz | auto |
+
+#### `accounts_userroleassignment`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID PK | |
+| user_id | bigint FK → accounts_user (CASCADE) | |
+| role_id | UUID FK → accounts_role (PROTECT) | |
+| organization_id | UUID FK → organizations_organization (PROTECT) | nullable |
+| restaurant_id | UUID FK → organizations_restaurant (PROTECT) | nullable |
+| branch_id | UUID FK → organizations_branch (PROTECT) | nullable |
+| is_active | bool indexed | |
+| created_at | timestamptz | auto |
+| updated_at | timestamptz | auto |
+
+### `accounts_user` — Phase 3 additions
+
+| Column | Type | Notes |
+|--------|------|-------|
+| phone | varchar(30) | new in Phase 3 |
+
+All other User fields are unchanged from Phase 1.
+
+### Design Notes
+
+- `UserRoleAssignment.clean()` validates: branch belongs to restaurant, restaurant belongs to organization, role scope is respected.
+- `PROTECT` FKs on organization/restaurant/branch prevent orphaned assignments.
+- `CASCADE` on user ensures assignments are deleted when a user is deleted.
+- Employee codes are not unique globally — uniqueness within an organization is enforced at the application level (not yet a DB constraint).
+- All UUID fields use `uuid.uuid4` as default — never sequential.

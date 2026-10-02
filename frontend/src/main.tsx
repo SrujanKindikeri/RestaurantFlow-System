@@ -1,6 +1,6 @@
 // =============================================================================
 // RestaurantFlow — Application Entry Point
-// Phase 2: ToastProvider added to the provider stack
+// Phase 3: AuthProvider added to provider stack
 // =============================================================================
 
 import React from 'react'
@@ -9,6 +9,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ToastProvider } from '@/components/ui/Toast'
+import { AuthProvider } from '@/contexts/AuthContext'
 import App from './App'
 import './index.css'
 
@@ -28,7 +29,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ToastProvider>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </ToastProvider>
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />

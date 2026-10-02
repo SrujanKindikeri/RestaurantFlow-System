@@ -179,3 +179,82 @@ CloudFront → ALB → Nginx → Gunicorn (REST)
                    → ElastiCache Redis
                    → Celery Workers
 ```
+
+---
+
+## Phase 3 Architecture
+
+```
+Browser (React + Vite, port 5173)
+    │  JWT Bearer token (stored in localStorage)
+    ▼
+Django REST Framework (port 8000)
+    │
+    ├── /api/health/
+    ├── /api/auth/          login / logout / register / me / token refresh
+    ├── /api/users/         user management
+    ├── /api/roles/         role listing
+    ├── /api/permissions/   permission registry
+    ├── /api/user-role-assignments/   scope assignment management
+    ├── /api/organizations/ (scoped to user's accessible orgs)
+    ├── /api/restaurants/   (scoped to user's accessible restaurants)
+    └── /api/branches/      (scoped to user's accessible branches)
+    │
+    ├── PostgreSQL 15 (port 5432)
+    │       accounts_user
+    │       accounts_userprofile
+    │       accounts_permission
+    │       accounts_role
+    │       accounts_role_permissions
+    │       accounts_userroleassignment
+    │       organizations_organization
+    │       organizations_restaurant
+    │       organizations_restaurantsettings
+    │       organizations_branch
+    │       organizations_branchsettings
+    │       token_blacklist_*  (simplejwt)
+    │
+    └── Redis 7 (port 6379)
+            Django Channels
+            Celery broker
+            Django cache
+
+```
+
+### Authorization Flow (Phase 3)
+
+```
+Request with Bearer token
+    ↓
+JWTAuthentication (simplejwt)
+    ↓
+request.user resolved
+    ↓
+DRF permission classes evaluated left-to-right:
+    IsAuthenticated → HasPermission(code) → [HasOrganizationAccess | HasRestaurantAccess | HasBranchAccess]
+    ↓
+get_queryset() calls acl.get_accessible_*() — scoped to user's assignments
+    ↓
+get_object() fetches from scoped queryset — outside-scope → 404
+    ↓
+Response (or 401 / 403 / 404)
+```
+
+### Django App Dependency Graph
+
+```
+organizations  →  core
+accounts       →  core
+organizations  →  accounts  (UserRoleAssignment FKs)
+```
+
+### Phase 3 Security Properties
+
+- UUID PKs on all business models prevent sequential enumeration
+- Soft delete (`is_active`) on Users, Roles, Assignments — never hard-delete operational records
+- `PROTECT` FKs on org/restaurant/branch in UserRoleAssignment
+- `UserRoleAssignment.clean()` enforces hierarchy at model level
+- `get_queryset()` always scoped — no `Model.objects.all()` in business endpoints
+- Resources outside scope return 404 (no existence leakage)
+- `is_superuser` and `is_staff` cannot be set via the public API
+- JWT refresh tokens are blacklisted on logout

@@ -385,3 +385,165 @@ Get branch settings.
 | 5     | `/api/menu/`        | Menu categories and items |
 | 6     | `/api/orders/`      | Order management          |
 | 8     | `/api/billing/`     | Bills and payments        |
+
+---
+
+## Phase 3 — Auth Additions
+
+### `POST /api/auth/logout/`
+
+Blacklists the refresh token. Requires authentication.
+
+**Request:**
+```json
+{"refresh": "<refresh_token>"}
+```
+
+**Response 200:**
+```json
+{"detail": "Successfully logged out."}
+```
+
+---
+
+## Phase 3 — Users
+
+### `GET /api/users/`
+
+List users scoped to the requesting user's authority. Requires `user.view`.
+
+**Query params:** `search`, `page`
+
+**Response 200:**
+```json
+{
+  "count": 9,
+  "results": [
+    {
+      "id": 1,
+      "email": "company@restaurantflow.dev",
+      "full_name": "Srujan Mehta",
+      "phone": "+91-9000000100",
+      "is_active": true,
+      "profile": {"employee_code": "EMP-0001", "display_name": "..."},
+      "scope": {
+        "is_superuser": false,
+        "permissions": ["organization.view", "restaurant.view", "..."],
+        "roles": [{"role_code": "COMPANY_HEAD", "role_name": "Company Head", ...}]
+      }
+    }
+  ]
+}
+```
+
+### `POST /api/users/`
+
+Create a new user. Requires `user.create`.
+
+**Request:**
+```json
+{"email": "new@example.com", "first_name": "First", "last_name": "Last", "password": "Secure@123"}
+```
+
+### `GET /api/users/{id}/`
+
+Full user detail including all role assignments and effective permissions.
+
+### `PATCH /api/users/{id}/`
+
+Update safe fields: `first_name`, `last_name`, `phone`, `profile`.
+
+### `POST /api/users/{id}/disable/`
+
+Soft-disable a user. Requires `user.disable`.
+
+### `POST /api/users/{id}/reactivate/`
+
+Reactivate a disabled user. Requires `user.disable`.
+
+### `GET /api/users/{id}/roles/`
+
+List active role assignments for a user.
+
+### `POST /api/users/{id}/roles/`
+
+Assign a role. Requires `role.manage`. Subject to privilege-escalation rules.
+
+**Request:**
+```json
+{
+  "role": "<role-uuid>",
+  "organization": "<org-uuid>",
+  "restaurant": "<restaurant-uuid>",
+  "branch": "<branch-uuid>"
+}
+```
+
+---
+
+## Phase 3 — Role Assignments
+
+### `GET /api/user-role-assignments/{id}/`
+
+Assignment detail.
+
+### `PATCH /api/user-role-assignments/{id}/`
+
+Update scope fields. Requires `role.manage`.
+
+### `POST /api/user-role-assignments/{id}/disable/`
+
+Deactivate an assignment. Requires `role.manage`.
+
+---
+
+## Phase 3 — Roles
+
+### `GET /api/roles/`
+
+List all roles with embedded permissions. Requires `role.view`.
+
+### `GET /api/roles/{id}/`
+
+Role detail including all permission codes.
+
+---
+
+## Phase 3 — Permissions
+
+### `GET /api/permissions/`
+
+List all registered permission codes. Requires `permission.view`.
+
+**Query params:** `module` (filter by module name)
+
+**Response 200:**
+```json
+{
+  "count": 46,
+  "results": [
+    {"id": "...", "code": "organization.view", "name": "View Organization", "module": "organization", "action": "view", "is_active": true}
+  ]
+}
+```
+
+---
+
+## Phase 3 — Permission Codes Reference
+
+| Module | Codes |
+|--------|-------|
+| organization | `organization.view` `organization.create` `organization.update` `organization.disable` |
+| restaurant | `restaurant.view` `restaurant.create` `restaurant.update` `restaurant.disable` |
+| branch | `branch.view` `branch.create` `branch.update` `branch.disable` |
+| user | `user.view` `user.create` `user.update` `user.disable` |
+| role | `role.view` `role.manage` |
+| permission | `permission.view` `permission.manage` |
+| order | `order.view` `order.create` `order.update` `order.cancel` |
+| bill | `bill.view` `bill.create` `bill.print` `bill.cancel` `bill.edit.request` `bill.edit.approve` |
+| payment | `payment.view` `payment.create` `payment.refund.request` `payment.refund.approve` |
+| inventory | `inventory.view` `inventory.receive` `inventory.adjust` `inventory.wastage` |
+| expense | `expense.view` `expense.create` `expense.approve` |
+| report | `report.sales.view` `report.accounts.view` `report.profit.view` |
+| kitchen | `kitchen.order.view` `kitchen.order.update` |
+| issue | `issue.view` `issue.create` `issue.resolve` |

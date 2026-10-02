@@ -1,6 +1,6 @@
 // =============================================================================
 // RestaurantFlow — Global TypeScript Types
-// Phase 1 Foundation + Phase 2 Organizations
+// Phase 1 Foundation + Phase 2 Organizations + Phase 3 Users/Roles/Permissions
 // =============================================================================
 
 // -----------------------------------------------------------------------------
@@ -32,8 +32,33 @@ export interface HealthCheckResponse {
 }
 
 // -----------------------------------------------------------------------------
-// Auth
+// Phase 3 — Auth / Users
 // -----------------------------------------------------------------------------
+
+export interface UserProfile {
+  display_name: string
+  employee_code: string
+  profile_photo: string | null
+  is_active: boolean
+}
+
+/** Scope summary returned by /api/auth/me/ and /api/users/<id>/ */
+export interface UserScope {
+  is_superuser: boolean
+  is_staff: boolean
+  permissions: string[]
+  roles: UserScopeRole[]
+}
+
+export interface UserScopeRole {
+  assignment_id: string
+  role_code: string
+  role_name: string
+  scope: 'organization' | 'restaurant' | 'branch'
+  organization: { id: string; name: string } | null
+  restaurant: { id: string; name: string } | null
+  branch: { id: string; name: string } | null
+}
 
 export interface User {
   id: number
@@ -41,8 +66,19 @@ export interface User {
   first_name: string
   last_name: string
   full_name: string
+  phone: string
   is_active: boolean
   date_joined: string
+  updated_at: string
+  profile: UserProfile | null
+  scope: UserScope
+}
+
+export interface UserDetail extends User {
+  is_staff: boolean
+  last_login: string | null
+  role_assignments: UserRoleAssignment[]
+  permissions: string[]
 }
 
 export interface LoginRequest {
@@ -59,8 +95,88 @@ export interface RegisterRequest {
   email: string
   first_name: string
   last_name: string
+  phone?: string
   password: string
   password_confirm: string
+}
+
+export interface UserCreatePayload {
+  email: string
+  first_name: string
+  last_name: string
+  phone?: string
+  password: string
+}
+
+export interface UserUpdatePayload {
+  first_name?: string
+  last_name?: string
+  phone?: string
+  profile?: Partial<UserProfile>
+}
+
+// -----------------------------------------------------------------------------
+// Phase 3 — Roles & Permissions
+// -----------------------------------------------------------------------------
+
+export interface Permission {
+  id: string
+  code: string
+  name: string
+  description: string
+  module: string
+  action: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface RoleMinimal {
+  id: string
+  name: string
+  code: string
+  scope: 'organization' | 'restaurant' | 'branch'
+}
+
+export interface Role {
+  id: string
+  name: string
+  code: string
+  description: string
+  scope: 'organization' | 'restaurant' | 'branch'
+  is_system_role: boolean
+  is_active: boolean
+  permissions: Permission[]
+  permission_codes: string[]
+  created_at: string
+  updated_at: string
+}
+
+// -----------------------------------------------------------------------------
+// Phase 3 — User Role Assignments
+// -----------------------------------------------------------------------------
+
+export interface UserRoleAssignment {
+  id: string
+  user: number
+  role: string
+  role_detail: RoleMinimal
+  organization: string | null
+  organization_name: string | null
+  restaurant: string | null
+  restaurant_name: string | null
+  branch: string | null
+  branch_name: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface UserRoleAssignmentCreatePayload {
+  role: string
+  organization?: string | null
+  restaurant?: string | null
+  branch?: string | null
 }
 
 // -----------------------------------------------------------------------------

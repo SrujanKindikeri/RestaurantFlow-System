@@ -40,6 +40,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "channels",
     "django_filters",
@@ -353,6 +354,11 @@ LOGGING = {
             "propagate": False,
         },
         "core": {
+            "handlers": ["console", "file_general"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "organizations": {
             "handlers": ["console", "file_general"],
             "level": LOG_LEVEL,
             "propagate": False,

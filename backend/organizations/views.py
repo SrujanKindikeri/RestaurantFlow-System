@@ -1,39 +1,42 @@
 # =============================================================================
 # RestaurantFlow — Organizations Views
-# Phase 2
+# Phase 3: Scoped queryset helpers + permission class integration
 #
-# URL layout (registered in organizations/urls.py → config/urls.py):
-#
+# URL layout:
 #   /api/organizations/                     list + create
 #   /api/organizations/<id>/                retrieve + partial_update
 #   /api/organizations/<id>/restaurants/    list + create restaurants under org
 #   /api/organizations/stats/               aggregate dashboard counts
 #
-#   /api/restaurants/                       list all restaurants (admin-style)
+#   /api/restaurants/                       list (scoped to user)
 #   /api/restaurants/<id>/                  retrieve + partial_update
-#   /api/restaurants/<id>/branches/         list + create branches under restaurant
+#   /api/restaurants/<id>/branches/         list + create branches
 #   /api/restaurants/<id>/settings/         retrieve + partial_update settings
 #
-#   /api/branches/                          list all branches (admin-style)
+#   /api/branches/                          list (scoped to user)
 #   /api/branches/<id>/                     retrieve + partial_update
 #   /api/branches/<id>/settings/            retrieve + partial_update settings
 #
-# Security notes (Phase 2):
-#   - All endpoints require IsAuthenticated (inherited from DRF default).
-#   - Scoped queryset helpers are extracted so Phase 3 can swap in real
-#     ownership checks without rewriting views.
-#   - IDs are always UUIDs — no sequential exposure.
-#   - 404 is returned when a resource exists but belongs to a different scope,
-#     preventing information leakage.
+# Security (Phase 3):
+#   - All queryset helpers now filter by user scope via accounts.access.
+#   - get_object() always fetches from the scoped queryset — users who know
+#     a UUID for a resource they cannot access receive 404, not 403,
+#     preventing existence leakage.
+#   - OrganizationStatsView returns counts scoped to the user's accessible
+#     resources, not global counts.
+#   - Superuser / is_staff bypass scope filters as before.
 # =============================================================================
 
 import logging
 from django.db.models import Count, Q
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from accounts import access as acl
+from accounts.permissions import HasPermission, HasOrganizationAccess, HasRestaurantAccess, HasBranchAccess
 
 from .models import Organization, Restaurant, Branch, RestaurantSettings, BranchSettings
 from .serializers import (
@@ -52,37 +55,89 @@ logger = logging.getLogger("organizations")
 
 
 # =============================================================================
-# Queryset helpers — Phase 3 will narrow these to ownership scope
+# Queryset helpers — Phase 3: scoped to authenticated user
 # =============================================================================
 
 def get_organization_queryset(request=None):
     """
-    Return the base Organization queryset.
-    Phase 3 will filter by request.user.organization or staff flag.
+    Return the Organizations queryset scoped to the requesting user.
+
+    Superuser / staff  → all organizations (unfiltered).
+    Everyone else      → only organizations accessible via their role assignments.
     """
-    return Organization.objects.annotate(
+    base_qs = Organization.objects.annotate(
         restaurant_count=Count("restaurants"),
         active_restaurant_count=Count(
             "restaurants", filter=Q(restaurants__is_active=True)
         ),
     )
 
+    if request is None:
+        return base_qs
+
+    user = request.user
+    if not user or not user.is_authenticated:
+        return base_qs.none()
+
+    if user.is_superuser or user.is_staff:
+        return base_qs
+
+    # Narrow to organizations accessible to this user
+    accessible_ids = acl.get_accessible_organizations(user).values_list("pk", flat=True)
+    return base_qs.filter(pk__in=accessible_ids)
+
 
 def get_restaurant_queryset(request=None, organization_id=None):
-    qs = Restaurant.objects.annotate(
+    """
+    Return the Restaurants queryset scoped to the requesting user.
+
+    organization_id — optional additional filter (for nested URL patterns).
+    """
+    base_qs = Restaurant.objects.annotate(
         branch_count=Count("branches"),
         active_branch_count=Count("branches", filter=Q(branches__is_active=True)),
     )
+
     if organization_id:
-        qs = qs.filter(organization_id=organization_id)
-    return qs
+        base_qs = base_qs.filter(organization_id=organization_id)
+
+    if request is None:
+        return base_qs
+
+    user = request.user
+    if not user or not user.is_authenticated:
+        return base_qs.none()
+
+    if user.is_superuser or user.is_staff:
+        return base_qs
+
+    accessible_ids = acl.get_accessible_restaurants(user).values_list("pk", flat=True)
+    return base_qs.filter(pk__in=accessible_ids)
 
 
 def get_branch_queryset(request=None, restaurant_id=None):
-    qs = Branch.objects.select_related("restaurant__organization")
+    """
+    Return the Branches queryset scoped to the requesting user.
+
+    restaurant_id — optional additional filter.
+    """
+    base_qs = Branch.objects.select_related("restaurant__organization")
+
     if restaurant_id:
-        qs = qs.filter(restaurant_id=restaurant_id)
-    return qs
+        base_qs = base_qs.filter(restaurant_id=restaurant_id)
+
+    if request is None:
+        return base_qs
+
+    user = request.user
+    if not user or not user.is_authenticated:
+        return base_qs.none()
+
+    if user.is_superuser or user.is_staff:
+        return base_qs
+
+    accessible_ids = acl.get_accessible_branches(user).values_list("pk", flat=True)
+    return base_qs.filter(pk__in=accessible_ids)
 
 
 # =============================================================================
@@ -91,11 +146,16 @@ def get_branch_queryset(request=None, restaurant_id=None):
 
 class OrganizationListCreateView(generics.ListCreateAPIView):
     """
-    GET  /api/organizations/   — list all organizations
-    POST /api/organizations/   — create a new organization
+    GET  /api/organizations/   — list accessible organizations
+    POST /api/organizations/   — create a new organization (org admins only)
     """
 
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), HasPermission("organization.create")()]
+        return [IsAuthenticated()]
 
     def get_serializer_class(self):
         return OrganizationSerializer
@@ -115,12 +175,16 @@ class OrganizationListCreateView(generics.ListCreateAPIView):
 
 class OrganizationDetailView(generics.RetrieveUpdateAPIView):
     """
-    GET   /api/organizations/<id>/    — retrieve detail (with restaurants)
-    PATCH /api/organizations/<id>/    — partial update
+    GET   /api/organizations/<id>/    — retrieve (user must have access)
+    PATCH /api/organizations/<id>/    — partial update (requires organization.update)
     """
 
-    permission_classes = [IsAuthenticated]
     http_method_names = ["get", "patch", "head", "options"]
+
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), HasPermission("organization.update")(), HasOrganizationAccess()]
+        return [IsAuthenticated(), HasOrganizationAccess()]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -143,19 +207,30 @@ class OrganizationDetailView(generics.RetrieveUpdateAPIView):
 class OrganizationStatsView(APIView):
     """
     GET /api/organizations/stats/
-    Returns aggregate counts for the dashboard.
+    Returns counts scoped to the requesting user's accessible resources.
     """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        user = request.user
+
+        if user.is_superuser or user.is_staff:
+            orgs = Organization.objects.all()
+            restaurants = Restaurant.objects.all()
+            branches = Branch.objects.all()
+        else:
+            orgs = acl.get_accessible_organizations(user)
+            restaurants = acl.get_accessible_restaurants(user)
+            branches = acl.get_accessible_branches(user)
+
         stats = {
-            "total_organizations": Organization.objects.count(),
-            "active_organizations": Organization.objects.filter(is_active=True).count(),
-            "total_restaurants": Restaurant.objects.count(),
-            "active_restaurants": Restaurant.objects.filter(is_active=True).count(),
-            "total_branches": Branch.objects.count(),
-            "active_branches": Branch.objects.filter(is_active=True).count(),
+            "total_organizations": orgs.count(),
+            "active_organizations": orgs.filter(is_active=True).count(),
+            "total_restaurants": restaurants.count(),
+            "active_restaurants": restaurants.filter(is_active=True).count(),
+            "total_branches": branches.count(),
+            "active_branches": branches.filter(is_active=True).count(),
         }
         serializer = OrganizationStatsSerializer(stats)
         return Response(serializer.data)
@@ -180,7 +255,6 @@ class OrganizationRestaurantListCreateView(generics.ListCreateAPIView):
                 pk=self.kwargs["org_id"]
             )
         except Organization.DoesNotExist:
-            from rest_framework.exceptions import NotFound
             raise NotFound("Organization not found.")
         return org
 
@@ -190,14 +264,17 @@ class OrganizationRestaurantListCreateView(generics.ListCreateAPIView):
         )
 
     def perform_create(self, serializer):
+        # Check permission
+        if not acl.has_permission(self.request.user, "restaurant.create"):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to create restaurants.")
+
         org = self._get_organization()
         if not org.is_active:
-            from rest_framework.exceptions import ValidationError
             raise ValidationError(
                 {"organization": "Cannot create a restaurant under a disabled organization."}
             )
         restaurant = serializer.save(organization=org)
-        # Auto-create settings
         RestaurantSettings.objects.get_or_create(restaurant=restaurant)
         logger.info(
             "Restaurant created: %s (id=%s) under org=%s by user=%s",
@@ -213,9 +290,7 @@ class OrganizationRestaurantListCreateView(generics.ListCreateAPIView):
 # =============================================================================
 
 class RestaurantListView(generics.ListAPIView):
-    """
-    GET /api/restaurants/   — list all restaurants across all organizations
-    """
+    """GET /api/restaurants/ — list restaurants scoped to user."""
 
     permission_classes = [IsAuthenticated]
     serializer_class = RestaurantSerializer
@@ -230,8 +305,12 @@ class RestaurantDetailView(generics.RetrieveUpdateAPIView):
     PATCH /api/restaurants/<id>/
     """
 
-    permission_classes = [IsAuthenticated]
     http_method_names = ["get", "patch", "head", "options"]
+
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), HasPermission("restaurant.update")(), HasRestaurantAccess()]
+        return [IsAuthenticated(), HasRestaurantAccess()]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -257,13 +336,16 @@ class RestaurantSettingsView(generics.RetrieveUpdateAPIView):
     PATCH /api/restaurants/<restaurant_id>/settings/
     """
 
-    permission_classes = [IsAuthenticated]
     serializer_class = RestaurantSettingsSerializer
     http_method_names = ["get", "patch", "head", "options"]
 
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), HasPermission("restaurant.update")()]
+        return [IsAuthenticated()]
+
     def get_object(self):
         restaurant_id = self.kwargs["restaurant_id"]
-        # Verify restaurant exists and is accessible
         restaurant = generics.get_object_or_404(
             get_restaurant_queryset(self.request), pk=restaurant_id
         )
@@ -292,7 +374,6 @@ class RestaurantBranchListCreateView(generics.ListCreateAPIView):
                 pk=self.kwargs["restaurant_id"]
             )
         except Restaurant.DoesNotExist:
-            from rest_framework.exceptions import NotFound
             raise NotFound("Restaurant not found.")
 
     def get_queryset(self):
@@ -301,14 +382,16 @@ class RestaurantBranchListCreateView(generics.ListCreateAPIView):
         )
 
     def perform_create(self, serializer):
+        if not acl.has_permission(self.request.user, "branch.create"):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to create branches.")
+
         restaurant = self._get_restaurant()
         if not restaurant.is_active:
-            from rest_framework.exceptions import ValidationError
             raise ValidationError(
                 {"restaurant": "Cannot create a branch under a disabled restaurant."}
             )
         branch = serializer.save(restaurant=restaurant)
-        # Auto-create settings
         BranchSettings.objects.get_or_create(branch=branch)
         logger.info(
             "Branch created: %s (id=%s) under restaurant=%s by user=%s",
@@ -324,9 +407,7 @@ class RestaurantBranchListCreateView(generics.ListCreateAPIView):
 # =============================================================================
 
 class BranchListView(generics.ListAPIView):
-    """
-    GET /api/branches/   — list all branches
-    """
+    """GET /api/branches/ — list branches scoped to user."""
 
     permission_classes = [IsAuthenticated]
     serializer_class = BranchSerializer
@@ -341,8 +422,12 @@ class BranchDetailView(generics.RetrieveUpdateAPIView):
     PATCH /api/branches/<id>/
     """
 
-    permission_classes = [IsAuthenticated]
     http_method_names = ["get", "patch", "head", "options"]
+
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), HasPermission("branch.update")(), HasBranchAccess()]
+        return [IsAuthenticated(), HasBranchAccess()]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -368,9 +453,13 @@ class BranchSettingsView(generics.RetrieveUpdateAPIView):
     PATCH /api/branches/<branch_id>/settings/
     """
 
-    permission_classes = [IsAuthenticated]
     serializer_class = BranchSettingsSerializer
     http_method_names = ["get", "patch", "head", "options"]
+
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), HasPermission("branch.update")()]
+        return [IsAuthenticated()]
 
     def get_object(self):
         branch_id = self.kwargs["branch_id"]
