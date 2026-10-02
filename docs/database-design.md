@@ -1,166 +1,217 @@
 # RestaurantFlow — Database Design
 
-## Overview
+## Phase 2 Schema
 
-RestaurantFlow uses PostgreSQL as its primary database.
-
-The schema is designed for multi-tenancy from day one:
+### Entity Relationship Overview
 
 ```
-Organization (Company)
-    └── Restaurant
-            └── Branch
-                    └── Counter
-                             └── Cash Session
-                                      └── Orders / Bills
+accounts_user
+    │  (Phase 3 will add org/restaurant/branch FK)
+    │
+organizations_organization
+    │ id (UUID PK)          slug (unique)
+    │ name                  legal_name
+    │ currency              timezone
+    │ is_active             created_at / updated_at
+    │
+    └── organizations_restaurant
+            │ id (UUID PK)
+            │ organization_id (FK → PROTECT)
+            │ name              slug (unique per org)
+            │ code (unique per org)
+            │ is_active         created_at / updated_at
+            │
+            ├── organizations_restaurantsettings
+            │       id (UUID PK)
+            │       restaurant_id (OneToOne → CASCADE)
+            │       currency      timezone
+            │       tax_enabled   default_tax_rate
+            │       order_prefix  allow_negative_stock
+            │
+            └── organizations_branch
+                    │ id (UUID PK)
+                    │ restaurant_id (FK → PROTECT)
+                    │ name          code (unique per restaurant)
+                    │ latitude      longitude
+                    │ is_active     created_at / updated_at
+                    │
+                    └── organizations_branchsettings
+                            id (UUID PK)
+                            branch_id (OneToOne → CASCADE)
+                            opening_time    closing_time
+                            default_order_type
 ```
 
 ---
 
-## Phase 1 — Current Schema
+## Tables
 
-Only the custom `User` table exists in Phase 1.
+### `organizations_organization`
 
-### accounts_user
+| Column       | Type         | Constraints            |
+|--------------|--------------|------------------------|
+| id           | UUID         | PK, default=uuid4      |
+| name         | VARCHAR(255) | NOT NULL, index        |
+| legal_name   | VARCHAR(255) |                        |
+| slug         | SLUG(255)    | UNIQUE, index          |
+| email        | EMAIL        |                        |
+| phone        | VARCHAR(30)  |                        |
+| address      | TEXT         |                        |
+| city         | VARCHAR(100) |                        |
+| state        | VARCHAR(100) |                        |
+| country      | VARCHAR(100) | default 'India'        |
+| postal_code  | VARCHAR(20)  |                        |
+| tax_id       | VARCHAR(100) |                        |
+| currency     | VARCHAR(10)  | default 'INR'          |
+| timezone     | VARCHAR(50)  | default 'Asia/Kolkata' |
+| is_active    | BOOLEAN      | default True, index    |
+| created_at   | TIMESTAMPTZ  | auto                   |
+| updated_at   | TIMESTAMPTZ  | auto                   |
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | bigint (PK) | Auto-increment |
-| email | varchar (unique) | Login identifier |
-| first_name | varchar(150) | |
-| last_name | varchar(150) | |
-| password | varchar | Hashed (Django PBKDF2) |
-| is_active | boolean | Default: true |
-| is_staff | boolean | Admin site access |
-| is_superuser | boolean | Full permissions |
-| date_joined | timestamptz | Auto-set on create |
-| last_login | timestamptz | Updated by Django auth |
-| updated_at | timestamptz | Auto-updated |
+Indexes: `slug`, `is_active`
 
----
+### `organizations_restaurant`
 
-## Future Schema (Phases 2–15)
+| Column          | Type         | Constraints                             |
+|-----------------|--------------|-----------------------------------------|
+| id              | UUID         | PK                                      |
+| organization_id | UUID         | FK → Organization (PROTECT)             |
+| name            | VARCHAR(255) | NOT NULL, index                         |
+| slug            | SLUG(255)    | unique per org (UniqueConstraint)       |
+| code            | VARCHAR(50)  | unique per org (UniqueConstraint), index|
+| description     | TEXT         |                                         |
+| email           | EMAIL        |                                         |
+| phone           | VARCHAR(30)  |                                         |
+| address         | TEXT         |                                         |
+| city            | VARCHAR(100) |                                         |
+| state           | VARCHAR(100) |                                         |
+| country         | VARCHAR(100) |                                         |
+| postal_code     | VARCHAR(20)  |                                         |
+| is_active       | BOOLEAN      | default True, index                     |
+| created_at      | TIMESTAMPTZ  | auto                                    |
+| updated_at      | TIMESTAMPTZ  | auto                                    |
 
-### organizations (Phase 2)
+Constraints:
+- `unique_restaurant_code_per_org` — `(organization_id, code)`
+- `unique_restaurant_slug_per_org` — `(organization_id, slug)`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | bigint (PK) | |
-| name | varchar | Company name |
-| slug | varchar (unique) | URL-safe identifier |
-| is_active | boolean | |
-| created_at | timestamptz | |
-| updated_at | timestamptz | |
+Indexes: `(organization_id, is_active)`, `(organization_id, code)`, `(organization_id, slug)`
 
-### restaurants (Phase 2)
+### `organizations_branch`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | bigint (PK) | |
-| organization | FK → organizations | |
-| name | varchar | |
-| slug | varchar | Unique within org |
-| is_active | boolean | |
-| created_at | timestamptz | |
-| updated_at | timestamptz | |
+| Column        | Type           | Constraints                                  |
+|---------------|----------------|----------------------------------------------|
+| id            | UUID           | PK                                           |
+| restaurant_id | UUID           | FK → Restaurant (PROTECT)                   |
+| name          | VARCHAR(255)   | NOT NULL, index                              |
+| code          | VARCHAR(50)    | unique per restaurant (UniqueConstraint)     |
+| address       | TEXT           |                                              |
+| city          | VARCHAR(100)   |                                              |
+| state         | VARCHAR(100)   |                                              |
+| country       | VARCHAR(100)   |                                              |
+| postal_code   | VARCHAR(20)    |                                              |
+| phone         | VARCHAR(30)    |                                              |
+| email         | EMAIL          |                                              |
+| latitude      | DECIMAL(9,6)   | nullable                                     |
+| longitude     | DECIMAL(9,6)   | nullable                                     |
+| is_active     | BOOLEAN        | default True, index                          |
+| created_at    | TIMESTAMPTZ    | auto                                         |
+| updated_at    | TIMESTAMPTZ    | auto                                         |
 
-### branches (Phase 2)
+Constraints:
+- `unique_branch_code_per_restaurant` — `(restaurant_id, code)`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | bigint (PK) | |
-| restaurant | FK → restaurants | |
-| name | varchar | |
-| address | text | |
-| is_active | boolean | |
-| created_at | timestamptz | |
-| updated_at | timestamptz | |
+Indexes: `(restaurant_id, is_active)`, `(restaurant_id, code)`
 
-### counters (Phase 4)
+### `organizations_restaurantsettings`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | bigint (PK) | |
-| branch | FK → branches | |
-| name | varchar | |
-| is_active | boolean | |
-| created_at | timestamptz | |
+| Column              | Type          | Constraints                        |
+|---------------------|---------------|------------------------------------|
+| id                  | UUID          | PK                                 |
+| restaurant_id       | UUID          | OneToOne → Restaurant (CASCADE)    |
+| currency            | VARCHAR(10)   | blank (inherits from org if empty) |
+| timezone            | VARCHAR(50)   | blank                              |
+| tax_enabled         | BOOLEAN       | default True                       |
+| default_tax_rate    | DECIMAL(5,2)  | default 0.00                       |
+| receipt_header      | TEXT          |                                    |
+| receipt_footer      | TEXT          |                                    |
+| allow_negative_stock| BOOLEAN       | default False                      |
+| order_prefix        | VARCHAR(20)   | default 'ORD'                      |
+| is_active           | BOOLEAN       | default True                       |
+| created_at          | TIMESTAMPTZ   | auto                               |
+| updated_at          | TIMESTAMPTZ   | auto                               |
 
-### users (Phase 3)
+### `organizations_branchsettings`
 
-Extends `accounts_user` with role and multi-tenant assignment:
-
-| Column | Type | Notes |
-|--------|------|-------|
-| user | FK → accounts_user | |
-| role | varchar / FK | Company Head, Manager, Cashier, etc. |
-| organization | FK → organizations | nullable |
-| restaurant | FK → restaurants | nullable |
-| branch | FK → branches | nullable |
-| counter | FK → counters | nullable |
-
-### orders (Phase 6)
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | bigint (PK) | |
-| counter | FK → counters | |
-| table | FK → tables (nullable) | Dine-in only |
-| status | varchar | pending, in_kitchen, ready, served, billed |
-| order_type | varchar | dine_in, takeaway, delivery |
-| created_by | FK → users | |
-| created_at | timestamptz | Immutable once set |
-| updated_at | timestamptz | |
-
-### bills (Phase 8)
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | bigint (PK) | |
-| order | FK → orders | |
-| total_amount | decimal(12,2) | |
-| tax_amount | decimal(12,2) | |
-| discount_amount | decimal(12,2) | |
-| status | varchar | draft, issued, paid, refunded |
-| created_at | timestamptz | **Immutable** |
-
-> **Rule:** Financial records are never deleted. Corrections use reversal entries.
+| Column              | Type          | Constraints                        |
+|---------------------|---------------|------------------------------------|
+| id                  | UUID          | PK                                 |
+| branch_id           | UUID          | OneToOne → Branch (CASCADE)        |
+| opening_time        | TIME          | nullable                           |
+| closing_time        | TIME          | nullable                           |
+| default_order_type  | VARCHAR(20)   | choices: dine_in/takeaway/delivery |
+| receipt_footer      | TEXT          |                                    |
+| is_active           | BOOLEAN       | default True                       |
+| created_at          | TIMESTAMPTZ   | auto                               |
+| updated_at          | TIMESTAMPTZ   | auto                               |
 
 ---
 
 ## Design Principles
 
-### UUIDs vs BigInt PKs
-Phase 1 uses `BigAutoField` (bigint). If public-facing UUIDs are needed for
-security (hiding record counts), they can be added as a separate `uuid` field
-in Phase 2+.
+### UUID Primary Keys
 
-### Soft Deletes
-Business entities (restaurants, branches, menu items) use `is_active` flags
-rather than hard deletes. This preserves referential integrity for historical
-orders and financial data.
+All business entities use `UUID` primary keys (`default=uuid.uuid4`).
+This prevents enumeration attacks (`/api/organizations/1/`, `2/`, `3/`) and makes IDs safe to expose publicly.
 
-### Timestamps
-All models inherit from `core.models.TimestampedModel` which provides:
-- `created_at` — set once on creation
-- `updated_at` — updated on every save
+### Soft Delete via `is_active`
 
-### Financial Immutability
-Once a `Bill` or `Payment` is finalized, it must not be mutated.
-Corrections are handled by reversal records (credit notes, refunds).
-This ensures a complete audit trail.
+No business record is ever hard-deleted through the normal API. Setting `is_active = False` preserves the record and all FK relationships while preventing new operational data from being created beneath it. Administrators can reactivate records via the API or Django Admin.
 
-### Multi-Tenancy Strategy
-All queries for business data must be scoped through the tenant hierarchy:
+### PROTECT Foreign Keys
+
+`ForeignKey(on_delete=PROTECT)` is used for all parent→child org relationships:
+- `Restaurant.organization` → PROTECT
+- `Branch.restaurant` → PROTECT
+
+This ensures that attempting to delete an organization with restaurants, or a restaurant with branches, raises an explicit database error instead of silently cascading.
+
+Settings use `CASCADE` because they are subordinate configuration records that have no independent meaning without their parent.
+
+### TimestampedModel
+
+All models inherit `core.models.TimestampedModel` which provides `created_at` (auto on create) and `updated_at` (auto on every save). This is the audit trail foundation. Phase 9 will add a full `AuditLog` model.
+
+### Slug Auto-Generation
+
+`Organization.save()` and `Restaurant.save()` auto-generate slugs from `name` using `django.utils.text.slugify`. Collisions are resolved by appending a counter (`-1`, `-2`, etc.). Slugs are unique globally for organizations, and unique per-organization for restaurants.
+
+---
+
+## Future Schema (upcoming phases)
 
 ```
-Request User
-    → verify Organization membership
-    → verify Restaurant access
-    → verify Branch access
-    → verify Counter access (where applicable)
-    → execute query
-```
+Phase 3:
+    accounts_user
+        ├── organization_id (FK)
+        ├── restaurant_id (FK, nullable)
+        ├── branch_id (FK, nullable)
+        └── role (CharField)
 
-This is enforced server-side on every API request.
-Frontend IDs are never trusted for authorization.
+Phase 4:
+    organizations_counter
+        └── branch_id (FK)
+    organizations_cashsession
+        └── counter_id (FK)
+
+Phase 5:
+    menu_category
+        └── restaurant_id (FK)
+    menu_item
+        └── category_id (FK)
+
+Phase 6+:
+    orders_order, orders_orderitem
+    billing_bill, billing_payment
+    inventory_*, accounting_*
+```

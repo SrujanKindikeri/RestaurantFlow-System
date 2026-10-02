@@ -1,176 +1,181 @@
 # RestaurantFlow — Architecture
 
-## Overview
-
-RestaurantFlow is a multi-restaurant management and POS platform built on a clean,
-modular architecture that scales from a single restaurant to a company with many
-branches and counters.
-
----
-
-## Current Architecture (Phase 1)
+## Current Architecture (Phase 2)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                        Browser                          │
-│                                                         │
-│          React + TypeScript + Vite + Tailwind           │
-│          React Router · React Query · Axios             │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-                  HTTP / REST
-                       │
-┌──────────────────────▼──────────────────────────────────┐
-│                  Django REST API                         │
-│                                                         │
-│    Django 4.2 · DRF · Simple JWT · django-cors-headers  │
-│    Django Channels (WebSocket-ready)                     │
-└──────────┬───────────────────────┬──────────────────────┘
-           │                       │
-  ┌────────▼────────┐   ┌──────────▼─────────┐
-  │   PostgreSQL    │   │       Redis         │
-  │   (primary DB)  │   │  (cache / channels) │
-  └─────────────────┘   └────────────────────┘
-```
-
----
-
-## Future Architecture (Phase 15)
-
-```
-              CloudFront / CDN
-                    │
-              Nginx (reverse proxy)
-                    │
-        ┌───────────┴────────────┐
-        │                        │
-   React SPA               Django ASGI
-   (static)                      │
-                    ┌────────────┴────────────┐
-                    │                          │
-              REST API                  WebSocket (Channels)
-                    │                          │
-              Gunicorn                   Daphne / ASGI
-                    │
-         ┌──────────┴────────────┐
-         │                       │
-    PostgreSQL (RDS)          Redis (ElastiCache)
-                                   │
-                              Celery Workers
-```
-
----
-
-## Backend Structure
-
-```
-backend/
-├── config/           ← Django project config (settings, urls, wsgi, asgi)
-├── accounts/         ← Custom User model, JWT auth endpoints
-├── core/             ← Shared utilities, health endpoint, abstract models
-│
-│   — Future apps (added per phase) —
-├── organizations/    ← Phase 2
-├── restaurants/      ← Phase 2
-├── branches/         ← Phase 2
-├── users/            ← Phase 3
-├── menu/             ← Phase 5
-├── tables/           ← Phase 6
-├── orders/           ← Phase 6
-├── kitchen/          ← Phase 7
-├── billing/          ← Phase 8
-├── payments/         ← Phase 8
-├── inventory/        ← Phase 10
-├── accounting/       ← Phase 11
-├── analytics/        ← Phase 12
-└── audit/            ← Phase 9
-```
-
----
-
-## Frontend Structure
-
-```
-frontend/src/
-├── components/   ← Reusable, stateless UI components
-├── layouts/      ← Page shell / navigation wrappers
-├── pages/        ← Route-level page components
-├── services/     ← All API calls (never raw axios in components)
-├── hooks/        ← Custom React hooks (data fetching, state)
-├── contexts/     ← React context providers (Auth, etc.)
-├── types/        ← Shared TypeScript interfaces & types
-└── utils/        ← Pure helper functions (formatters, cn, etc.)
-```
-
----
-
-## Architectural Principles
-
-### 1. Modular Django Apps
-Each business domain lives in its own app. No monolithic `models.py`.
-
-### 2. Service / Hook Separation (Frontend)
-Business logic lives in `services/` and `hooks/`. Components only render.
-
-### 3. Server-Side Authorization
-All access control is enforced on the backend. Frontend never makes
-authorization decisions.
-
-### 4. Multi-Tenancy First
-The system supports multiple organizations → restaurants → branches → counters
-from day one. No single-tenant shortcuts that must be refactored later.
-
-### 5. Immutable Financial Records
-Completed financial transactions are never deleted. Audit trails are preserved.
-
-### 6. Environment-Based Config
-No secrets in code. All sensitive values come from environment variables.
-
----
-
-## API Design
-
-- All endpoints live under `/api/`
-- Authentication uses JWT Bearer tokens
-- Responses use a consistent envelope for errors:
-
-```json
-{
-  "error": true,
-  "message": "Human-readable summary",
-  "details": { ... }
-}
-```
-
-- Pagination follows DRF's `PageNumberPagination` pattern:
-
-```json
-{
-  "count": 100,
-  "next": "http://...",
-  "previous": null,
-  "results": [...]
-}
-```
-
----
-
-## Data Flow (Phase 1)
-
-```
-User Action
+Browser (React + Vite, port 5173)
     │
+    │  REST API (JSON over HTTP)
+    │  Authorization: Bearer <JWT>
+    ▼
+Django REST Framework (port 8000)
+    │
+    ├── /api/health/
+    ├── /api/auth/          (accounts app)
+    ├── /api/organizations/ (organizations app)
+    ├── /api/restaurants/   (organizations app)
+    └── /api/branches/      (organizations app)
+    │
+    ├── PostgreSQL 15 (port 5432)
+    │       accounts_user
+    │       organizations_organization
+    │       organizations_restaurant
+    │       organizations_restaurantsettings
+    │       organizations_branch
+    │       organizations_branchsettings
+    │
+    └── Redis 7 (port 6379)
+            Django Channels (WebSocket-ready)
+            Celery broker (foundation)
+            Django cache backend
+```
+
+---
+
+## Request / Response Flow
+
+```
 React Component
+    │  (e.g. OrganizationsListPage)
     │
-  Hook  (useHealth, useQuery, etc.)
+    ▼
+React Query Hook
+    │  (e.g. useOrganizations)
     │
-  Service  (services/api.ts → services/health.ts)
+    ▼
+Service Function
+    │  (e.g. listOrganizations())
     │
-Axios (with JWT interceptor)
+    ▼
+Axios Instance (services/api.ts)
+    │  Attaches Bearer token (request interceptor)
+    │  Handles 401 → token refresh (response interceptor)
     │
-Django View  (DRF APIView / @api_view)
+    ▼
+Django REST Framework View
+    │  (e.g. OrganizationListCreateView)
+    │  Authentication: JWTAuthentication
+    │  Permissions: IsAuthenticated
     │
+    ▼
+Queryset Helper
+    │  (e.g. get_organization_queryset())
+    │  Phase 3 will add ownership filter here
+    │
+    ▼
 Django ORM
     │
+    ▼
 PostgreSQL
+```
+
+---
+
+## Django App Structure
+
+```
+config/         Project settings, URL routing, WSGI/ASGI
+accounts/       Custom User model (email-based), JWT auth endpoints
+core/           TimestampedModel, health endpoint, custom exception handler
+organizations/  Phase 2 business hierarchy (Organization → Restaurant → Branch)
+```
+
+### Dependency graph
+
+```
+organizations → core (TimestampedModel)
+accounts      → (standalone, no internal deps)
+core          → (standalone base)
+```
+
+---
+
+## Frontend Architecture
+
+```
+pages/
+    Uses hooks → which call services → which call api.ts
+    Renders components → which receive props typed from types/index.ts
+
+components/ui/       Reusable primitives (no domain knowledge)
+components/          Domain components (know about Organization, Restaurant, Branch)
+hooks/               React Query data layer (cache management, mutations)
+services/            API call functions (thin wrappers around api.ts helpers)
+types/               Shared TypeScript interfaces (mirrors backend serializer output)
+utils/               Pure utilities (cn, formatters)
+```
+
+---
+
+## Security Architecture
+
+### Authentication
+- JWT Bearer tokens via `djangorestframework-simplejwt`
+- Access token: 60 minutes (configurable via `JWT_ACCESS_TOKEN_LIFETIME`)
+- Refresh token: 7 days (configurable via `JWT_REFRESH_TOKEN_LIFETIME`)
+- Token rotation enabled — each refresh yields a new refresh token
+- Frontend automatically retries with a fresh access token on 401
+
+### Authorization (Phase 2)
+All Phase 2 endpoints require `IsAuthenticated`. Full RBAC arrives in Phase 3.
+
+The queryset helper pattern means adding ownership checks in Phase 3 requires changing only 3 functions, not 11 views:
+
+```python
+# Phase 2 (current):
+def get_organization_queryset(request=None):
+    return Organization.objects.annotate(...)
+
+# Phase 3 (planned):
+def get_organization_queryset(request=None):
+    qs = Organization.objects.annotate(...)
+    if request and not request.user.is_staff:
+        qs = qs.filter(memberships__user=request.user)
+    return qs
+```
+
+### IDOR Prevention
+- All resource IDs are UUIDs — not guessable
+- Nested URL parameters are typed as `<uuid:pk>` — non-UUID strings return 404
+- Future Phase 3 ownership filter will ensure users only see their own orgs
+
+### CORS
+- `DEBUG=True` (development): all origins allowed
+- `DEBUG=False` (production): `CORS_ALLOWED_ORIGINS` from environment variable
+
+### Input Validation
+- Serializer-level validation on all write endpoints
+- Unique constraints enforced at both serializer and database level
+- Custom exception handler wraps all errors — raw Django/DB errors never reach the client
+
+---
+
+## Data Integrity
+
+| Concern                  | Mechanism                                              |
+|--------------------------|--------------------------------------------------------|
+| Soft delete              | `is_active` flag — no hard deletes on business records |
+| Cascade prevention       | `PROTECT` FK on all org hierarchy relationships        |
+| Duplicate codes          | `UniqueConstraint` at DB + serializer validation       |
+| UUID-only public IDs     | `UUIDField(primary_key=True, default=uuid.uuid4)`      |
+| Audit timestamps         | `TimestampedModel` on all models                       |
+| Settings auto-creation   | Views call `get_or_create` after parent is saved       |
+
+---
+
+## Future Architecture Changes
+
+### Phase 3 — RBAC
+The User model will gain `organization`, `restaurant`, `branch`, and `role` fields. Queryset helpers will enforce scoped access.
+
+### Phase 7 — WebSocket (Django Channels)
+Django Channels is already installed and Redis is configured as the channel layer. Phase 7 adds the Kitchen Display System over WebSocket.
+
+### Phase 15 — Production Deployment
+```
+CloudFront → ALB → Nginx → Gunicorn (REST)
+                         → Daphne    (WebSocket/ASGI)
+                   → RDS PostgreSQL
+                   → ElastiCache Redis
+                   → Celery Workers
 ```

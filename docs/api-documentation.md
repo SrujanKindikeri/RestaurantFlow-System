@@ -1,239 +1,387 @@
 # RestaurantFlow — API Documentation
 
-## Overview
+## Base URL
 
-- Base URL: `http://localhost:8000/api/` (development)
-- All requests and responses use **JSON**
-- Authentication: **JWT Bearer Token**
-- API versioning will be introduced in Phase 2 under `/api/v1/`
-
----
+```
+http://localhost:8000/api
+```
 
 ## Authentication
 
-Include the access token in the `Authorization` header:
+All Phase 2 endpoints require a valid JWT Bearer token.
 
 ```
 Authorization: Bearer <access_token>
 ```
 
-Tokens are obtained via the login endpoint and refreshed using the refresh endpoint.
+Obtain tokens:
+```http
+POST /api/auth/login/
+Content-Type: application/json
+
+{"email": "user@example.com", "password": "password"}
+```
+
+Response:
+```json
+{"access": "...", "refresh": "..."}
+```
 
 ---
 
-## Error Response Envelope
+## Error Format
 
-All errors return a consistent shape:
+All errors follow the envelope from `core.exceptions.custom_exception_handler`:
 
 ```json
 {
   "error": true,
-  "message": "Human-readable description of the error",
+  "message": "A restaurant with code 'SPICE-001' already exists in this organization.",
   "details": {
-    "field_name": ["Validation message"]
+    "code": ["A restaurant with code 'SPICE-001' already exists in this organization."]
   }
 }
 ```
 
 ---
 
-## Phase 1 Endpoints
+## Health Check
 
-### Health Check
+### `GET /api/health/`
 
-#### `GET /api/health/`
+No authentication required.
 
-Check backend availability. No authentication required.
-
-**Response `200 OK`:**
-
+**Response 200:**
 ```json
-{
-  "status": "ok",
-  "service": "RestaurantFlow API"
-}
+{"status": "ok", "service": "RestaurantFlow API"}
 ```
 
 ---
 
-### Authentication
+## Authentication Endpoints
 
-#### `POST /api/auth/register/`
-
-Register a new user account.
+### `POST /api/auth/register/`
 
 **Request:**
-
 ```json
 {
   "email": "user@example.com",
   "first_name": "Jane",
   "last_name": "Doe",
-  "password": "securepassword123",
-  "password_confirm": "securepassword123"
+  "password": "secret1234",
+  "password_confirm": "secret1234"
 }
 ```
 
-**Response `201 Created`:**
-
-```json
-{
-  "id": 1,
-  "email": "user@example.com",
-  "first_name": "Jane",
-  "last_name": "Doe",
-  "full_name": "Jane Doe",
-  "is_active": true,
-  "date_joined": "2026-10-02T10:00:00Z"
-}
-```
+**Response 201:** User object (id, email, first_name, last_name, full_name, is_active, date_joined)
 
 ---
 
-#### `POST /api/auth/login/`
-
-Obtain JWT access and refresh tokens.
+### `POST /api/auth/login/`
 
 **Request:**
-
 ```json
-{
-  "email": "user@example.com",
-  "password": "securepassword123"
-}
+{"email": "user@example.com", "password": "secret1234"}
 ```
 
-**Response `200 OK`:**
-
+**Response 200:**
 ```json
-{
-  "access": "<jwt_access_token>",
-  "refresh": "<jwt_refresh_token>"
-}
+{"access": "<jwt>", "refresh": "<jwt>"}
 ```
 
 ---
 
-#### `POST /api/auth/token/refresh/`
+### `POST /api/auth/token/refresh/`
 
-Exchange a refresh token for a new access token.
-
-**Request:**
-
-```json
-{
-  "refresh": "<jwt_refresh_token>"
-}
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "access": "<new_jwt_access_token>"
-}
-```
+**Request:** `{"refresh": "<token>"}`
+**Response 200:** `{"access": "<new_token>"}`
 
 ---
 
-#### `POST /api/auth/token/verify/`
+### `GET /api/auth/me/`
 
-Verify that an access token is valid.
-
-**Request:**
-
-```json
-{
-  "token": "<jwt_access_token>"
-}
-```
-
-**Response `200 OK`:** (empty body on success)
+Returns the authenticated user's profile.
 
 ---
 
-#### `GET /api/auth/me/`
+## Organization Endpoints
 
-Return the authenticated user's profile.
+### `GET /api/organizations/`
 
-**Headers:** `Authorization: Bearer <access_token>`
+List all organizations.
 
-**Response `200 OK`:**
-
+**Response 200:**
 ```json
 {
-  "id": 1,
-  "email": "user@example.com",
-  "first_name": "Jane",
-  "last_name": "Doe",
-  "full_name": "Jane Doe",
-  "is_active": true,
-  "date_joined": "2026-10-02T10:00:00Z"
-}
-```
-
----
-
-## Future Endpoints (Phase 2+)
-
-The following endpoint groups will be added in later phases:
-
-| Phase | Prefix | Description |
-|-------|--------|-------------|
-| 2 | `/api/organizations/` | Company management |
-| 2 | `/api/restaurants/` | Restaurant management |
-| 2 | `/api/branches/` | Branch management |
-| 3 | `/api/users/` | User & role management |
-| 4 | `/api/counters/` | Counter & cash session management |
-| 5 | `/api/menu/` | Menu categories & items |
-| 6 | `/api/tables/` | Table management |
-| 6 | `/api/orders/` | Order creation & management |
-| 7 | `/api/kitchen/` | Kitchen display & ticket management |
-| 8 | `/api/billing/` | Bill generation & payment |
-| 9 | `/api/approvals/` | Discount & void approvals |
-| 10 | `/api/inventory/` | Inventory management |
-| 11 | `/api/accounting/` | Accounting & journal entries |
-| 12 | `/api/analytics/` | Reporting & analytics |
-
----
-
-## Pagination
-
-All list endpoints return paginated results:
-
-```json
-{
-  "count": 150,
-  "next": "http://localhost:8000/api/restaurants/?page=2",
+  "count": 2,
+  "next": null,
   "previous": null,
-  "results": [...]
+  "results": [
+    {
+      "id": "uuid",
+      "name": "RestaurantFlow Foods",
+      "legal_name": "RestaurantFlow Foods Pvt Ltd",
+      "slug": "restaurantflow-foods",
+      "email": "admin@company.com",
+      "phone": "+91 9000000001",
+      "city": "Bangalore",
+      "country": "India",
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "is_active": true,
+      "restaurant_count": 3,
+      "active_restaurant_count": 3,
+      "created_at": "2026-10-02T12:00:00Z",
+      "updated_at": "2026-10-02T12:00:00Z"
+    }
+  ]
 }
 ```
 
-Default page size: **20**. Override with `?page_size=50` (max: 100).
+---
+
+### `POST /api/organizations/`
+
+Create a new organization.
+
+**Request:**
+```json
+{
+  "name": "Acme Foods",
+  "legal_name": "Acme Foods Pvt Ltd",
+  "email": "admin@acme.com",
+  "currency": "INR",
+  "timezone": "Asia/Kolkata"
+}
+```
+
+**Validation errors:**
+- `name` is required
+- `email` must be valid if provided
+
+**Response 201:** Organization object
 
 ---
 
-## Filtering & Search
+### `GET /api/organizations/stats/`
 
-List endpoints support:
+Returns aggregate counts for all organizations.
 
-- `?search=keyword` — full-text search on searchable fields
-- `?ordering=field` — sort ascending (`field`) or descending (`-field`)
-- Field-specific filters vary by endpoint (documented per endpoint in later phases)
+**Response 200:**
+```json
+{
+  "total_organizations": 2,
+  "active_organizations": 2,
+  "total_restaurants": 5,
+  "active_restaurants": 5,
+  "total_branches": 12,
+  "active_branches": 11
+}
+```
 
 ---
 
-## HTTP Status Codes
+### `GET /api/organizations/<id>/`
 
-| Code | Meaning |
-|------|---------|
-| 200 | OK — successful GET / PUT / PATCH |
-| 201 | Created — successful POST |
-| 204 | No Content — successful DELETE |
-| 400 | Bad Request — validation error |
-| 401 | Unauthorized — missing or expired token |
-| 403 | Forbidden — authenticated but not authorized |
-| 404 | Not Found |
-| 405 | Method Not Allowed |
-| 500 | Internal Server Error |
+Retrieve organization detail with embedded restaurant list.
+
+**Response 200:**
+```json
+{
+  "id": "uuid",
+  "name": "RestaurantFlow Foods",
+  "...": "...",
+  "restaurants": [
+    {"id": "uuid", "name": "Spice Garden", "code": "SPICE-001", "...": "..."}
+  ]
+}
+```
+
+---
+
+### `PATCH /api/organizations/<id>/`
+
+Partial update. To soft-disable:
+
+```json
+{"is_active": false}
+```
+
+To reactivate:
+```json
+{"is_active": true}
+```
+
+**Response 200:** Updated organization object.
+
+---
+
+### `GET /api/organizations/<org_id>/restaurants/`
+
+List restaurants belonging to this organization.
+
+---
+
+### `POST /api/organizations/<org_id>/restaurants/`
+
+Create a restaurant under this organization.
+
+**Request:**
+```json
+{
+  "name": "Spice Garden",
+  "code": "SPICE-001",
+  "description": "Authentic South Indian cuisine",
+  "phone": "+91 9000000002",
+  "city": "Bangalore"
+}
+```
+
+**Validation errors:**
+- `name` and `code` are required
+- `code` must be unique within the organization
+- Organization must be active
+
+**Response 201:** Restaurant object. Settings are auto-created.
+
+---
+
+## Restaurant Endpoints
+
+### `GET /api/restaurants/`
+
+List all restaurants across all organizations.
+
+---
+
+### `GET /api/restaurants/<id>/`
+
+Restaurant detail with embedded branches and settings.
+
+```json
+{
+  "id": "uuid",
+  "name": "Spice Garden",
+  "code": "SPICE-001",
+  "branch_count": 3,
+  "active_branch_count": 3,
+  "settings": {
+    "currency": "INR",
+    "tax_enabled": true,
+    "default_tax_rate": "5.00",
+    "order_prefix": "SG"
+  },
+  "branches": [...]
+}
+```
+
+---
+
+### `PATCH /api/restaurants/<id>/`
+
+Partial update. Soft-disable: `{"is_active": false}`
+
+---
+
+### `GET /api/restaurants/<id>/branches/`
+
+List branches for this restaurant.
+
+---
+
+### `POST /api/restaurants/<id>/branches/`
+
+Create a branch.
+
+**Request:**
+```json
+{
+  "name": "LPU Campus",
+  "code": "SG-LPU",
+  "address": "LPU Campus, Phagwara",
+  "city": "Phagwara",
+  "phone": "+91 9000000010"
+}
+```
+
+**Validation errors:**
+- `name` and `code` are required
+- `code` must be unique within the restaurant
+- Restaurant must be active
+
+**Response 201:** Branch object. Settings are auto-created.
+
+---
+
+### `GET /api/restaurants/<id>/settings/`
+
+Get restaurant settings.
+
+---
+
+### `PATCH /api/restaurants/<id>/settings/`
+
+Update restaurant settings:
+
+```json
+{
+  "tax_enabled": true,
+  "default_tax_rate": "5.00",
+  "order_prefix": "SG",
+  "allow_negative_stock": false
+}
+```
+
+---
+
+## Branch Endpoints
+
+### `GET /api/branches/`
+
+List all branches.
+
+---
+
+### `GET /api/branches/<id>/`
+
+Branch detail with embedded settings.
+
+---
+
+### `PATCH /api/branches/<id>/`
+
+Partial update. Soft-disable: `{"is_active": false}`
+
+---
+
+### `GET /api/branches/<id>/settings/`
+
+Get branch settings.
+
+---
+
+### `PATCH /api/branches/<id>/settings/`
+
+```json
+{
+  "opening_time": "09:00:00",
+  "closing_time": "22:00:00",
+  "default_order_type": "dine_in"
+}
+```
+
+`default_order_type` choices: `dine_in`, `takeaway`, `delivery`
+
+---
+
+## Planned Endpoints (future phases)
+
+| Phase | Prefix              | Description               |
+|-------|---------------------|---------------------------|
+| 3     | `/api/users/`       | User management           |
+| 3     | `/api/roles/`       | Role assignments          |
+| 4     | `/api/counters/`    | POS counters              |
+| 4     | `/api/sessions/`    | Cash sessions             |
+| 5     | `/api/menu/`        | Menu categories and items |
+| 6     | `/api/orders/`      | Order management          |
+| 8     | `/api/billing/`     | Bills and payments        |

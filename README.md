@@ -1,73 +1,79 @@
 # RestaurantFlow
 
-**Restaurant Management & POS Platform**
-
-A production-oriented, multi-restaurant management and point-of-sale platform
-built with Django and React. Designed to scale from a single restaurant to a
-company with many branches and counters.
+A production-oriented restaurant management and POS platform built with Django, React, and PostgreSQL.
 
 ---
 
-## Current Status — Phase 1: Foundation ✅
+## Current Phase
 
-The technical foundation is in place. Business features will be built on top
-in subsequent phases.
+**Phase 2 — Organizations, Restaurants & Branches**
+
+The organizational hierarchy is fully operational:
+
+```
+Organization (company / legal entity)
+    └── Restaurant  (a brand operated by the organization)
+            └── Branch  (a physical location of the restaurant)
+```
 
 ---
 
-## Tech Stack
+## Technology Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS |
-| State / Data | TanStack React Query, Axios |
-| Routing | React Router v6 |
-| Backend | Django 4.2, Django REST Framework |
-| Auth | Simple JWT |
-| Database | PostgreSQL 15 |
-| Cache / WS | Redis 7 |
-| Infrastructure | Docker Compose |
+| Layer      | Technology                                      |
+|------------|-------------------------------------------------|
+| Backend    | Django 4.2 · DRF 3.15 · Simple JWT             |
+| Database   | PostgreSQL 15                                   |
+| Cache/WS   | Redis 7 · Django Channels                       |
+| Frontend   | React 18 · TypeScript · Vite · Tailwind CSS     |
+| State      | TanStack Query v5 · Axios                       |
+| Auth       | JWT (Bearer token) — Phase 3 adds full RBAC     |
 
 ---
 
 ## Quick Start
 
-### 1. Start infrastructure
+### 1 — Infrastructure (Docker)
 
 ```bash
 docker compose up -d
 ```
 
-### 2. Backend
+Starts PostgreSQL (port 5432) and Redis (port 6379).
+
+### 2 — Backend
 
 ```bash
 cd backend
-python -m venv venv
-
-# Windows
-.\venv\Scripts\Activate.ps1
-# macOS / Linux
-source venv/bin/activate
-
+cp .env.example .env          # fill in real values
 pip install -r requirements.txt
-cp .env.example .env   # edit as needed
 python manage.py migrate
 python manage.py runserver
 ```
 
-Backend: `http://localhost:8000`
-Health check: `http://localhost:8000/api/health/`
+Optional — load demo data:
 
-### 3. Frontend
+```bash
+python manage.py seed_demo_data
+```
+
+### 3 — Frontend
 
 ```bash
 cd frontend
+cp .env.example .env          # set VITE_API_URL
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-Frontend: `http://localhost:5173`
+Visit: http://localhost:5173
+
+### 4 — Verify
+
+```bash
+curl http://localhost:8000/api/health/
+# {"status": "ok", "service": "RestaurantFlow API"}
+```
 
 ---
 
@@ -76,91 +82,120 @@ Frontend: `http://localhost:5173`
 ```
 RestaurantFlow-System/
 ├── backend/
-│   ├── config/          ← Django project config
-│   ├── accounts/        ← Custom User model, JWT auth
-│   ├── core/            ← Health endpoint, shared utilities
+│   ├── config/               Django project config
+│   ├── accounts/             Custom User model (email-based)
+│   ├── core/                 TimestampedModel, health endpoint, exception handler
+│   ├── organizations/        Phase 2 — Organization / Restaurant / Branch
+│   │   ├── models.py
+│   │   ├── serializers.py
+│   │   ├── views.py
+│   │   ├── urls.py
+│   │   ├── admin.py
+│   │   ├── tests.py
+│   │   └── management/commands/seed_demo_data.py
 │   └── requirements.txt
 │
 ├── frontend/
 │   └── src/
+│       ├── types/            Shared TypeScript interfaces
+│       ├── services/         Axios API service layer
+│       ├── hooks/            React Query data hooks
 │       ├── components/
-│       ├── layouts/
+│       │   ├── ui/           Shared UI primitives
+│       │   ├── organization/
+│       │   ├── restaurant/
+│       │   └── branch/
 │       ├── pages/
-│       ├── services/    ← All API calls go here
-│       ├── hooks/
-│       ├── contexts/
-│       ├── types/
-│       └── utils/
+│       │   ├── organizations/
+│       │   ├── restaurants/
+│       │   └── branches/
+│       └── layouts/
 │
 ├── docs/
-│   ├── architecture.md
-│   ├── development-setup.md
-│   ├── database-design.md
-│   ├── api-documentation.md
-│   └── roadmap.md
-│
-├── tests/               ← Cross-system test structure
-├── deployment/          ← Deployment configs (Phase 15)
 ├── docker-compose.yml
-├── .gitignore
 └── README.md
 ```
 
 ---
 
-## API Endpoints (Phase 1)
+## API Endpoints (Phase 2)
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/health/` | None | Backend health check |
-| POST | `/api/auth/register/` | None | Register user |
-| POST | `/api/auth/login/` | None | Obtain JWT tokens |
-| POST | `/api/auth/token/refresh/` | None | Refresh access token |
-| GET | `/api/auth/me/` | Bearer | Current user profile |
+| Method   | Endpoint                                         | Description                    |
+|----------|--------------------------------------------------|--------------------------------|
+| GET      | `/api/health/`                                   | Health check                   |
+| GET/POST | `/api/organizations/`                            | List / create organizations    |
+| GET      | `/api/organizations/stats/`                      | Dashboard aggregate counts     |
+| GET/PATCH| `/api/organizations/<id>/`                       | Detail / update organization   |
+| GET/POST | `/api/organizations/<id>/restaurants/`           | List / create restaurants      |
+| GET      | `/api/restaurants/`                              | All restaurants (admin)        |
+| GET/PATCH| `/api/restaurants/<id>/`                         | Detail / update restaurant     |
+| GET/POST | `/api/restaurants/<id>/branches/`                | List / create branches         |
+| GET/PATCH| `/api/restaurants/<id>/settings/`                | Restaurant settings            |
+| GET      | `/api/branches/`                                 | All branches (admin)           |
+| GET/PATCH| `/api/branches/<id>/`                            | Detail / update branch         |
+| GET/PATCH| `/api/branches/<id>/settings/`                   | Branch settings                |
+
+All endpoints require `Authorization: Bearer <token>`.
 
 ---
 
-## Running Tests
+## Django Admin
+
+Available at `/admin/` after creating a superuser:
 
 ```bash
-cd backend
-python manage.py test
+python manage.py createsuperuser
+```
+
+Registered models: `Organization`, `Restaurant`, `Branch`, `RestaurantSettings`, `BranchSettings`, `User`.
+
+---
+
+## Development Commands
+
+```bash
+# Run tests
+python manage.py test organizations
+
+# Seed demo data
+python manage.py seed_demo_data
+
+# Reset and re-seed
+python manage.py seed_demo_data --reset
+
+# Frontend type check
+cd frontend && npm run type-check
+
+# Frontend build
+cd frontend && npm run build
 ```
 
 ---
 
 ## Documentation
 
-- [Architecture](docs/architecture.md)
-- [Development Setup](docs/development-setup.md)
-- [Database Design](docs/database-design.md)
-- [API Documentation](docs/api-documentation.md)
-- [Roadmap](docs/roadmap.md)
+| Document                         | Description                              |
+|----------------------------------|------------------------------------------|
+| `docs/architecture.md`           | System architecture and design decisions |
+| `docs/database-design.md`        | Database schema and relationships        |
+| `docs/api-documentation.md`      | Full API reference                       |
+| `docs/phase-2.md`                | Phase 2 implementation details           |
+| `docs/development-setup.md`      | Local development setup guide            |
+| `docs/roadmap.md`                | Full 15-phase development roadmap        |
+| `deployment/README.md`           | Production deployment (Phase 15)         |
 
 ---
 
-## Roadmap
+## Development Phases
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| 1 | Foundation | ✅ Complete |
-| 2 | Companies, Restaurants & Branches | Planned |
-| 3 | Users, Roles & Permissions | Planned |
-| 4 | Counters & Cash Sessions | Planned |
-| 5 | Menu | Planned |
-| 6 | Tables, Orders & POS | Planned |
-| 7 | Kitchen Display System | Planned |
-| 8 | Billing & Payments | Planned |
-| 9 | Approvals, Audit & Issues | Planned |
-| 10 | Inventory | Planned |
-| 11 | Accounts | Planned |
-| 12 | Restaurant Analytics | Planned |
-| 13 | Central Control Center | Planned |
-| 14 | Security & Monitoring | Planned |
-| 15 | Production Deployment | Planned |
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+| Phase | Status | Description                          |
+|-------|--------|--------------------------------------|
+| 1     | ✅ Done | Foundation — Django + React + Docker |
+| 2     | ✅ Done | Organizations, Restaurants, Branches |
+| 3     | 🔜     | Users, Roles & Permissions           |
+| 4     | 🔜     | Counters & Cash Sessions             |
+| 5     | 🔜     | Menu                                 |
+| 6     | 🔜     | Tables, Orders & POS                 |
+| 7     | 🔜     | Kitchen Display System               |
+| 8     | 🔜     | Billing & Payments                   |
+| 9+    | 🔜     | Audit, Inventory, Analytics, Deployment |

@@ -14,6 +14,7 @@ urlpatterns = [
     # API v1
     path("api/", include("core.urls")),
     path("api/", include("accounts.urls")),
+    path("api/", include("organizations.urls")),
 ]
 
 # Serve media files in development

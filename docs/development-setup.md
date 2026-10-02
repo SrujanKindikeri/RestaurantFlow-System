@@ -2,194 +2,104 @@
 
 ## Prerequisites
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| Python | 3.11+ | Use pyenv for version management |
-| Node.js | 20 LTS+ | Use nvm for version management |
-| Docker Desktop | Latest | Required for PostgreSQL and Redis |
-| Git | Latest | |
+- Python 3.11+
+- Node.js 20 LTS+
+- Docker Desktop (for PostgreSQL + Redis)
+- Git
 
 ---
 
-## 1. Clone / Open the Repository
+## 1 — Clone and Setup
 
 ```bash
+git clone <repo-url>
 cd RestaurantFlow-System
 ```
 
 ---
 
-## 2. Start Infrastructure (PostgreSQL + Redis)
-
-Docker Compose manages the database and cache.
+## 2 — Start Infrastructure
 
 ```bash
 docker compose up -d
 ```
 
-Verify services are healthy:
-
+Verify:
 ```bash
 docker compose ps
-```
-
-Both `restaurantflow_postgres` and `restaurantflow_redis` should show `healthy`.
-
-To stop services:
-
-```bash
-docker compose down
-```
-
-To stop and remove volumes (full reset):
-
-```bash
-docker compose down -v
+# postgres: healthy
+# redis:    healthy
 ```
 
 ---
 
-## 3. Backend Setup
-
-### 3.1 Create a Virtual Environment
+## 3 — Backend Setup
 
 ```bash
 cd backend
-python -m venv venv
+cp .env.example .env
 ```
 
-Activate it:
-
-- **Windows (PowerShell):** `.\venv\Scripts\Activate.ps1`
-- **macOS / Linux:** `source venv/bin/activate`
-
-### 3.2 Install Dependencies
+Edit `.env` with real values (at minimum, confirm `DB_PASSWORD` matches `docker-compose.yml`).
 
 ```bash
 pip install -r requirements.txt
-```
-
-### 3.3 Configure Environment Variables
-
-```bash
-# Copy the example file
-cp .env.example .env
-```
-
-Open `backend/.env` and set:
-
-```env
-SECRET_KEY=generate-a-random-key-here
-DEBUG=True
-DB_NAME=restaurantflow
-DB_USER=restaurantflow
-DB_PASSWORD=change_me
-DB_HOST=localhost
-DB_PORT=5432
-REDIS_URL=redis://localhost:6379/0
-```
-
-> The PostgreSQL credentials must match what you set in `docker-compose.yml`.
-> The defaults work out of the box with the included Docker Compose config.
-
-### 3.4 Run Migrations
-
-```bash
 python manage.py migrate
-```
-
-### 3.5 Create a Superuser (optional)
-
-```bash
 python manage.py createsuperuser
-```
-
-### 3.6 Start the Backend
-
-```bash
 python manage.py runserver
 ```
 
-The API is now available at `http://localhost:8000/api/`.
-
-Test the health endpoint:
-
+Verify:
 ```bash
 curl http://localhost:8000/api/health/
-# → {"status": "ok", "service": "RestaurantFlow API"}
+# {"status": "ok", "service": "RestaurantFlow API"}
 ```
-
-Django admin is available at `http://localhost:8000/admin/`.
 
 ---
 
-## 4. Frontend Setup
+## 4 — Seed Demo Data (optional)
 
-### 4.1 Install Dependencies
+```bash
+python manage.py seed_demo_data
+```
+
+Creates:
+- Organization: RestaurantFlow Foods
+- Restaurants: Spice Garden, Urban Bites, Royal Kitchen
+- Branches: 7 locations across 3 restaurants
+
+Reset and reseed:
+```bash
+python manage.py seed_demo_data --reset
+```
+
+---
+
+## 5 — Frontend Setup
 
 ```bash
 cd frontend
-npm install
-```
-
-### 4.2 Configure Environment Variables
-
-```bash
 cp .env.example .env
-```
-
-The default `.env` works as-is for local development:
-
-```env
-VITE_API_URL=http://localhost:8000/api
-VITE_APP_NAME=RestaurantFlow
-```
-
-### 4.3 Start the Frontend
-
-```bash
+npm install
 npm run dev
 ```
 
-The app is now available at `http://localhost:5173`.
+Visit: http://localhost:5173
 
 ---
 
-## 5. Verify Everything Works
-
-With both backend and frontend running, open `http://localhost:5173`.
-
-You should see:
-
-```
-RestaurantFlow
-Restaurant Management & POS Platform
-
-System Status
-─────────────────────
-Backend   ● Connected
-API       ● Healthy
-```
-
----
-
-## 6. Running Tests
-
-### Backend Tests
+## 6 — Run Tests
 
 ```bash
 cd backend
-python manage.py test
-```
-
-Run a specific app:
-
-```bash
-python manage.py test core
+python manage.py test organizations
 python manage.py test accounts
+python manage.py test core
 ```
 
-### Frontend Type Check
+---
+
+## 7 — TypeScript Check
 
 ```bash
 cd frontend
@@ -198,60 +108,67 @@ npm run type-check
 
 ---
 
-## 7. Project Structure Overview
+## 8 — Production Build
 
-```
-RestaurantFlow-System/
-├── backend/          ← Django REST API
-│   ├── config/       ← Django settings, urls, wsgi, asgi
-│   ├── accounts/     ← Custom User model + JWT auth
-│   ├── core/         ← Health endpoint, shared utilities
-│   └── requirements.txt
-│
-├── frontend/         ← React + TypeScript + Vite
-│   └── src/
-│       ├── components/
-│       ├── layouts/
-│       ├── pages/
-│       ├── services/
-│       ├── hooks/
-│       ├── contexts/
-│       ├── types/
-│       └── utils/
-│
-├── docs/             ← Project documentation
-├── tests/            ← Cross-system test structure
-├── deployment/       ← Deployment configs (future phases)
-└── docker-compose.yml
+```bash
+cd frontend
+npm run build
+# Output in frontend/dist/
 ```
 
 ---
 
-## 8. Common Issues
+## Environment Variables
 
-### Port already in use
+### Backend (`backend/.env`)
 
+| Variable                    | Default              | Description                          |
+|-----------------------------|----------------------|--------------------------------------|
+| `SECRET_KEY`                | (required)           | Django secret key                    |
+| `DEBUG`                     | `True`               | Debug mode                           |
+| `ALLOWED_HOSTS`             | `localhost,127.0.0.1`| Comma-separated allowed hosts        |
+| `DB_NAME`                   | `restaurantflow`     | PostgreSQL database name             |
+| `DB_USER`                   | `restaurantflow`     | PostgreSQL username                  |
+| `DB_PASSWORD`               | `change_me`          | PostgreSQL password                  |
+| `DB_HOST`                   | `localhost`          | PostgreSQL host                      |
+| `DB_PORT`                   | `5432`               | PostgreSQL port                      |
+| `REDIS_URL`                 | `redis://localhost:6379/0` | Redis connection URL           |
+| `CORS_ALLOWED_ORIGINS`      | `http://localhost:5173` | Allowed frontend origins (prod)   |
+| `JWT_ACCESS_TOKEN_LIFETIME` | `60`                 | Access token lifetime (minutes)      |
+| `JWT_REFRESH_TOKEN_LIFETIME`| `7`                  | Refresh token lifetime (days)        |
+| `LOG_LEVEL`                 | `DEBUG`              | Logging level                        |
+
+### Frontend (`frontend/.env`)
+
+| Variable        | Default                        | Description          |
+|-----------------|--------------------------------|----------------------|
+| `VITE_API_URL`  | `http://localhost:8000/api`    | Backend API base URL |
+| `VITE_APP_NAME` | `RestaurantFlow`               | App display name     |
+
+---
+
+## Django Admin
+
+1. Create superuser: `python manage.py createsuperuser`
+2. Visit: http://localhost:8000/admin/
+3. Available: Organization, Restaurant, Branch, RestaurantSettings, BranchSettings, User
+
+---
+
+## Common Issues
+
+**Port already in use (5432):**
 ```bash
-# Check what's using port 5432
-netstat -ano | findstr :5432
-
-# Or change the port in docker-compose.yml:
-ports:
-  - "5433:5432"
-# And update DB_PORT=5433 in backend/.env
+docker compose down && docker compose up -d
 ```
 
-### Django can't connect to PostgreSQL
+**Migration errors after pulling new code:**
+```bash
+python manage.py migrate --run-syncdb
+```
 
-1. Make sure Docker is running: `docker compose ps`
-2. Wait for the health check to pass (can take ~10s on first boot)
-3. Confirm `DB_HOST=localhost` in `backend/.env`
+**Frontend can't reach backend:**
+Check `VITE_API_URL` in `frontend/.env` matches the backend port.
 
-### Module not found (backend)
-
-Make sure your virtual environment is activated before running any `python` commands.
-
-### CORS errors in browser
-
-In development, `CORS_ALLOW_ALL_ORIGINS = True` is set when `DEBUG=True`.
-If you see CORS errors, confirm `DEBUG=True` in `backend/.env`.
+**CORS errors:**
+In development, `DEBUG=True` allows all origins. In production, set `CORS_ALLOWED_ORIGINS`.
