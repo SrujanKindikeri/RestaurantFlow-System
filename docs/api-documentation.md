@@ -798,3 +798,102 @@ Branch-level counter status overview. Requires `counter.view`.
   }
 }
 ```
+
+---
+
+## Phase 5 — Menu API
+
+All endpoints require `Authorization: Bearer <access_token>` and the corresponding permission.
+Results are scoped to the requesting user's accessible restaurants and branches — cross-tenant access returns 404.
+
+### Tax Rates
+
+| Method | Endpoint | Permission |
+|---|---|---|
+| GET | `/api/menu/tax-rates/` | `tax.view` |
+| POST | `/api/menu/tax-rates/` | `tax.create` |
+| GET | `/api/menu/tax-rates/{id}/` | `tax.view` |
+| PATCH | `/api/menu/tax-rates/{id}/` | `tax.update` |
+| POST | `/api/menu/tax-rates/{id}/disable/` | `tax.update` |
+| POST | `/api/menu/tax-rates/{id}/enable/` | `tax.update` |
+
+### Categories
+
+| Method | Endpoint | Permission |
+|---|---|---|
+| GET | `/api/menu/categories/` | `category.view` |
+| POST | `/api/menu/categories/` | `category.create` |
+| GET | `/api/menu/categories/{id}/` | `category.view` |
+| PATCH | `/api/menu/categories/{id}/` | `category.update` |
+| POST | `/api/menu/categories/{id}/disable/` | `category.disable` |
+| POST | `/api/menu/categories/{id}/enable/` | `category.create` |
+
+### Menu Items
+
+| Method | Endpoint | Permission |
+|---|---|---|
+| GET | `/api/menu/items/` | `menu.view` |
+| POST | `/api/menu/items/` | `menu.create` |
+| GET | `/api/menu/items/{id}/` | `menu.view` |
+| PATCH | `/api/menu/items/{id}/` | `menu.update` |
+| POST | `/api/menu/items/{id}/disable/` | `menu.disable` |
+| POST | `/api/menu/items/{id}/enable/` | `menu.create` |
+
+**Query parameters (items):** `restaurant`, `category`, `food_type`, `is_active`, `is_available`, `search`
+
+### Prices
+
+| Method | Endpoint | Permission |
+|---|---|---|
+| GET | `/api/menu/prices/` | `menu.price.view` |
+| POST | `/api/menu/prices/` | `menu.price.create` |
+| GET | `/api/menu/prices/{id}/` | `menu.price.view` |
+| PATCH | `/api/menu/prices/{id}/` | `menu.price.update` |
+| POST | `/api/menu/prices/{id}/deactivate/` | `menu.price.update` |
+
+### Availability
+
+| Method | Endpoint | Permission |
+|---|---|---|
+| GET | `/api/menu/availability/` | `menu.availability.view` |
+| POST | `/api/menu/availability/` | `menu.availability.update` |
+| GET | `/api/menu/availability/{id}/` | `menu.availability.view` |
+| PATCH | `/api/menu/availability/{id}/` | `menu.availability.update` |
+
+### Branch Catalog (POS)
+
+```http
+GET /api/menu/branches/{branch_id}/catalog/
+```
+
+Permission: `menu.view`. Returns only active categories, active items, and items available at this branch. Includes branch-specific price and tax data.
+
+**Response structure:**
+```json
+{
+  "branch": { "id": "...", "name": "LPU Campus", "restaurant_id": "...", "restaurant_name": "..." },
+  "categories": [
+    {
+      "id": "...", "name": "Non-Veg", "slug": "non-veg", "display_order": 2,
+      "items": [
+        {
+          "id": "...", "name": "Chicken Biryani", "slug": "chicken-biryani",
+          "sku": "SG-CB-001", "short_description": "...",
+          "food_type": "NON_VEG", "image": null,
+          "display_order": 1, "preparation_time_minutes": 20,
+          "price": "220.00",
+          "tax_rate_code": "GST_STANDARD", "tax_rate_name": "GST Standard", "tax_rate": "5.000"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Menu Dashboard
+
+```http
+GET /api/menu/dashboard/
+```
+
+Permission: `menu.view`. Returns summary counts for categories, items, and per-branch availability stats.

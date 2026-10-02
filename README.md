@@ -6,14 +6,21 @@ A production-oriented restaurant management and POS platform built with Django, 
 
 ## Current Phase
 
-**Phase 2 — Organizations, Restaurants & Branches**
+**Phase 5 — Menu, Categories, Branch Pricing, Availability & Tax**
 
-The organizational hierarchy is fully operational:
+The full menu catalog system is operational:
 
 ```
-Organization (company / legal entity)
-    └── Restaurant  (a brand operated by the organization)
-            └── Branch  (a physical location of the restaurant)
+Organization
+    └── Restaurant
+          ├── Branch
+          │    └── Counters / Sessions
+          └── Menu
+               ├── TaxRate (restaurant-scoped tax configuration)
+               ├── Category (Veg, Non-Veg, Snacks, Beverages, Desserts)
+               └── MenuItem
+                     ├── MenuItemPrice  (branch-specific pricing + history)
+                     └── MenuItemBranch (branch availability + time windows)
 ```
 
 ---
@@ -54,7 +61,8 @@ python manage.py runserver
 Optional — load demo data:
 
 ```bash
-python manage.py seed_demo_data
+python manage.py seed_demo_data   # Phase 1-4 orgs, restaurants, branches
+python manage.py seed_menu_data   # Phase 5 permissions + demo menu
 ```
 
 ### 3 — Frontend

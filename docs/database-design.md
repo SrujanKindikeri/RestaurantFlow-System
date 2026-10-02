@@ -415,3 +415,71 @@ organizations_branch
 All monetary columns (`opening_cash`, `expected_cash`, `actual_cash`, `cash_difference`) are `DECIMAL(12, 2)`. This supports values up to ₹9,999,999,999.99 with exact decimal precision — no floating-point rounding errors.
 
 `cash_difference` is always written by the backend service (`actual_cash − expected_cash`). No client-submitted value is accepted as authoritative.
+
+---
+
+## Phase 5 Schema Addition — Menu
+
+```
+organizations_restaurant
+    │
+    ├── menu_taxrate
+    │       id (UUID PK)
+    │       restaurant_id (FK → PROTECT)
+    │       code (unique per restaurant)   name
+    │       rate (Decimal 6,3)             description
+    │       is_active                      created_at / updated_at
+    │
+    ├── menu_category
+    │       id (UUID PK)
+    │       restaurant_id (FK → PROTECT)
+    │       name      slug (unique per restaurant)
+    │       image     description
+    │       display_order                  is_active
+    │       created_at / updated_at
+    │
+    └── menu_menuitem
+            id (UUID PK)
+            restaurant_id (FK → PROTECT)
+            category_id (FK → PROTECT)    must be same restaurant
+            tax_rate_id (FK → SET_NULL)   must be same restaurant if set
+            name      slug (unique per restaurant)
+            sku (unique per restaurant)   food_type (VEG/NON_VEG/EGG/VEGAN/OTHER)
+            description  short_description  image
+            display_order  is_active  is_available
+            preparation_time_minutes
+            created_at / updated_at
+            │
+            ├── menu_menuitemPrice
+            │       id (UUID PK)
+            │       menu_item_id (FK → PROTECT)
+            │       branch_id (FK → PROTECT)   branch.restaurant == item.restaurant
+            │       price (Decimal 12,2)        >= 0
+            │       effective_from (DateTimeField, nullable)
+            │       effective_to (DateTimeField, nullable)
+            │       is_active
+            │       created_at / updated_at
+            │       [NEVER deleted — full history preserved]
+            │
+            └── menu_menuitemBranch
+                    id (UUID PK)
+                    menu_item_id (FK → PROTECT)
+                    branch_id (FK → PROTECT)    branch.restaurant == item.restaurant
+                    is_available
+                    available_from (TimeField, nullable)
+                    available_to (TimeField, nullable)
+                    created_at / updated_at
+                    UNIQUE(menu_item_id, branch_id)
+```
+
+### Phase 5 Database Constraints
+
+| Constraint | Model | Fields |
+|---|---|---|
+| `unique_taxrate_code_per_restaurant` | TaxRate | `(restaurant, code)` |
+| `unique_category_slug_per_restaurant` | Category | `(restaurant, slug)` |
+| `unique_menuitem_slug_per_restaurant` | MenuItem | `(restaurant, slug)` |
+| `unique_menuitem_branch_availability` | MenuItemBranch | `(menu_item, branch)` |
+| `(restaurant, sku)` uniqueness | MenuItem | Enforced in serializer |
+| Price overlap prevention | MenuItemPrice | Enforced in serializer |
+| Cross-restaurant FK validation | MenuItem, MenuItemPrice, MenuItemBranch | Enforced in serializer + clean() |

@@ -57,6 +57,11 @@ const ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
+  menu: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+  ),
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -70,7 +75,17 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Counter Dashboard', to: '/counter-dashboard', permission: 'counter.view', icon: ICONS.sessions },
   { label: 'Counters', to: '/counters', permission: 'counter.view', icon: ICONS.counters },
   { label: 'Sessions', to: '/counter-sessions', permission: 'counter.session.view', icon: ICONS.sessions },
+  // Phase 5 — Menu
+  { label: 'Menu', to: '/menu', permission: 'menu.view', icon: ICONS.menu },
+  { label: 'Categories', to: '/menu/categories', permission: 'category.view', icon: ICONS.menu },
+  { label: 'Menu Items', to: '/menu/items', permission: 'menu.view', icon: ICONS.menu },
+  { label: 'Pricing', to: '/menu/pricing', permission: 'menu.price.view', icon: ICONS.menu },
+  { label: 'Availability', to: '/menu/availability', permission: 'menu.availability.view', icon: ICONS.menu },
+  { label: 'Tax Rates', to: '/menu/tax-rates', permission: 'tax.view', icon: ICONS.menu },
 ]
+
+const COUNTER_PERMS = new Set(['counter.view', 'counter.session.view'])
+const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
 
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -121,7 +136,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 4</p>
+            <p className="text-[10px] text-gray-600 font-mono">Phase 5</p>
           </div>
         </div>
 
@@ -131,7 +146,7 @@ export function MainLayout() {
             Management
           </p>
           <ul className="space-y-0.5" role="list">
-            {visibleItems.filter(i => !['counter.view','counter.session.view'].includes(i.permission ?? '')).map((item) => (
+            {visibleItems.filter(i => !COUNTER_PERMS.has(i.permission ?? '') && !MENU_PERMS.has(i.permission ?? '')).map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
@@ -154,17 +169,48 @@ export function MainLayout() {
           </ul>
 
           {/* Phase 4 — Counters section */}
-          {visibleItems.some(i => ['counter.view','counter.session.view'].includes(i.permission ?? '')) && (
+          {visibleItems.some(i => COUNTER_PERMS.has(i.permission ?? '')) && (
             <>
               <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
                 Counters & POS
               </p>
               <ul className="space-y-0.5" role="list">
-                {visibleItems.filter(i => ['counter.view','counter.session.view'].includes(i.permission ?? '')).map((item) => (
+                {visibleItems.filter(i => COUNTER_PERMS.has(i.permission ?? '')).map((item) => (
                   <li key={item.to}>
                     <NavLink
                       to={item.to}
                       end={item.to === '/'}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          isActive
+                            ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                            : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                        )
+                      }
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {/* Phase 5 — Menu section */}
+          {visibleItems.some(i => MENU_PERMS.has(i.permission ?? '')) && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Menu
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {visibleItems.filter(i => MENU_PERMS.has(i.permission ?? '')).map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.to === '/menu'}
                       onClick={() => setSidebarOpen(false)}
                       className={({ isActive }) =>
                         cn(

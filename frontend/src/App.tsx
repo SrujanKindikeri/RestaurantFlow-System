@@ -1,6 +1,6 @@
 // =============================================================================
 // RestaurantFlow — Application Routes
-// Phase 4: Counters + Sessions + Dashboard
+// Phase 5: Menu + Categories + Pricing + Availability + Tax
 // =============================================================================
 
 import { Routes, Route, Navigate } from 'react-router-dom'
@@ -31,6 +31,14 @@ import { CountersListPage } from '@/pages/counters/CountersListPage'
 import { CounterDetailPage } from '@/pages/counters/CounterDetailPage'
 import { CounterSessionsPage } from '@/pages/counters/CounterSessionsPage'
 import { CounterDashboardPage } from '@/pages/counters/CounterDashboardPage'
+
+// Phase 5 — Menu
+import { MenuDashboard } from '@/pages/menu/MenuDashboard'
+import { Categories } from '@/pages/menu/Categories'
+import { MenuItems } from '@/pages/menu/MenuItems'
+import { Pricing } from '@/pages/menu/Pricing'
+import { Availability } from '@/pages/menu/Availability'
+import { TaxRates } from '@/pages/menu/TaxRates'
 
 function App() {
   return (
@@ -73,6 +81,14 @@ function App() {
           <Route path="/counters/:id" element={<CounterDetailPage />} />
           <Route path="/counter-sessions" element={<CounterSessionsPage />} />
           <Route path="/counter-dashboard" element={<CounterDashboardPage />} />
+
+          {/* Phase 5 — Menu */}
+          <Route path="/menu" element={<MenuDashboard />} />
+          <Route path="/menu/categories" element={<Categories />} />
+          <Route path="/menu/items" element={<MenuItems />} />
+          <Route path="/menu/pricing" element={<Pricing />} />
+          <Route path="/menu/availability" element={<Availability />} />
+          <Route path="/menu/tax-rates" element={<TaxRates />} />
         </Route>
       </Route>
 

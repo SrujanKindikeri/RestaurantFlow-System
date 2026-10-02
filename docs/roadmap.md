@@ -74,15 +74,26 @@ infrastructure exists.
 
 ---
 
-## Phase 5 — Menu
+## Phase 5 — Menu, Categories, Branch Pricing, Availability & Tax ✅
 
-**Goal:** Build the full menu catalog.
+**Goal:** Build the full restaurant menu catalog with branch-aware pricing and availability.
 
-- `MenuCategory` model
-- `MenuItem` model (price, description, availability)
-- `MenuItemVariant` model (sizes, add-ons)
-- Menu availability by branch
-- Frontend: Menu builder screens
+- `TaxRate` model — restaurant-scoped, named tax configuration (never hard-coded)
+- `Category` model — ordered categories with slug uniqueness per restaurant
+- `MenuItem` model — full catalog item with food type, SKU, prep time, image
+- `MenuItemPrice` model — branch-specific pricing with full history preservation
+- `MenuItemBranch` model — branch availability with time-of-day windows
+- `is_menu_item_available()` service — availability check respecting restaurant timezone
+- Branch catalog API — read-optimized POS endpoint with price + tax
+- Menu dashboard API — summary stats per restaurant/branch
+- 15 new permissions integrated into all existing roles
+- All price fields use `DecimalField` — never float
+- Cross-restaurant isolation enforced at serializer + queryset level
+- Price history preserved — never overwritten
+- API: tax rates, categories, items, prices, availability, catalog, dashboard
+- Frontend: Menu Dashboard, Categories, Menu Items, Pricing, Availability, Tax Rates
+- 12 test classes, ~70 test methods covering all spec acceptance criteria
+- Documentation: `docs/menu.md`, `docs/pricing.md`, `docs/tax.md`, `docs/phase-5.md`
 
 ---
 

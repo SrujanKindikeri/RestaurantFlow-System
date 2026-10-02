@@ -562,3 +562,237 @@ export interface CounterDashboardResponse {
     maintenance: number
   }
 }
+
+// -----------------------------------------------------------------------------
+// Phase 5 — Menu
+// -----------------------------------------------------------------------------
+
+export type FoodType = 'VEG' | 'NON_VEG' | 'EGG' | 'VEGAN' | 'OTHER'
+
+export interface TaxRate {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  name: string
+  code: string
+  rate: string
+  description: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface TaxRateMinimal {
+  id: string
+  name: string
+  code: string
+  rate: string
+  is_active: boolean
+}
+
+export interface TaxRateCreatePayload {
+  restaurant: string
+  name: string
+  code: string
+  rate: string
+  description?: string
+}
+
+export type TaxRateUpdatePayload = Partial<TaxRateCreatePayload> & {
+  is_active?: boolean
+}
+
+export interface Category {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  name: string
+  slug: string
+  description: string
+  image: string | null
+  display_order: number
+  is_active: boolean
+  item_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CategoryCreatePayload {
+  restaurant: string
+  name: string
+  description?: string
+  display_order?: number
+}
+
+export type CategoryUpdatePayload = Partial<CategoryCreatePayload> & {
+  is_active?: boolean
+}
+
+export interface MenuItem {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  category: string
+  category_name: string
+  tax_rate: string | null
+  tax_rate_detail: TaxRateMinimal | null
+  name: string
+  slug: string
+  sku: string
+  description: string
+  short_description: string
+  image: string | null
+  food_type: FoodType
+  display_order: number
+  is_active: boolean
+  is_available: boolean
+  preparation_time_minutes: number
+  created_at: string
+  updated_at: string
+}
+
+export interface MenuItemDetail extends MenuItem {
+  active_prices: {
+    id: string
+    branch: string
+    branch_name: string
+    price: string
+    effective_from: string | null
+    effective_to: string | null
+  }[]
+  branch_availability: {
+    id: string
+    branch: string
+    branch_name: string
+    is_available: boolean
+    available_from: string | null
+    available_to: string | null
+  }[]
+}
+
+export interface MenuItemCreatePayload {
+  restaurant: string
+  category: string
+  name: string
+  sku?: string
+  description?: string
+  short_description?: string
+  food_type?: FoodType
+  tax_rate?: string | null
+  display_order?: number
+  preparation_time_minutes?: number
+}
+
+export type MenuItemUpdatePayload = Partial<MenuItemCreatePayload> & {
+  is_active?: boolean
+  is_available?: boolean
+}
+
+export interface MenuItemPrice {
+  id: string
+  menu_item: string
+  menu_item_name: string
+  menu_item_sku: string
+  branch: string
+  branch_name: string
+  restaurant_id: string
+  price: string
+  effective_from: string | null
+  effective_to: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface MenuItemPriceCreatePayload {
+  menu_item: string
+  branch: string
+  price: string
+  effective_from?: string | null
+  effective_to?: string | null
+  is_active?: boolean
+}
+
+export type MenuItemPriceUpdatePayload = Partial<MenuItemPriceCreatePayload>
+
+export interface MenuItemBranch {
+  id: string
+  menu_item: string
+  menu_item_name: string
+  menu_item_sku: string
+  branch: string
+  branch_name: string
+  restaurant_id: string
+  is_available: boolean
+  available_from: string | null
+  available_to: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MenuItemBranchCreatePayload {
+  menu_item: string
+  branch: string
+  is_available?: boolean
+  available_from?: string | null
+  available_to?: string | null
+}
+
+export type MenuItemBranchUpdatePayload = Partial<MenuItemBranchCreatePayload>
+
+// Catalog (POS read-optimized)
+export interface CatalogItem {
+  id: string
+  name: string
+  slug: string
+  sku: string
+  short_description: string
+  food_type: FoodType
+  image: string | null
+  display_order: number
+  preparation_time_minutes: number
+  price: string | null
+  tax_rate_code: string | null
+  tax_rate_name: string | null
+  tax_rate: string | null
+}
+
+export interface CatalogCategory {
+  id: string
+  name: string
+  slug: string
+  display_order: number
+  items: CatalogItem[]
+}
+
+export interface BranchCatalog {
+  branch: {
+    id: string
+    name: string
+    restaurant_id: string
+    restaurant_name: string
+  }
+  categories: CatalogCategory[]
+}
+
+// Dashboard
+export interface MenuDashboardStats {
+  categories: {
+    total: number
+    active: number
+    inactive: number
+  }
+  items: {
+    total: number
+    active: number
+    inactive: number
+    available: number
+    unavailable: number
+  }
+  branches: {
+    id: string
+    name: string
+    restaurant_name: string
+    available_items: number
+  }[]
+}

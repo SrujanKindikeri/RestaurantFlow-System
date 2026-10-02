@@ -1,6 +1,6 @@
 # RestaurantFlow — Architecture
 
-## Current Architecture (Phase 2)
+## Current Architecture (Phase 5)
 
 ```
 Browser (React + Vite, port 5173)
@@ -338,3 +338,48 @@ All Phase 1–3 security properties are preserved, plus:
 - `force_close` requires explicit elevated permission (`counter.session.force_close`)
 - Closed sessions are immutable — no casual patch endpoint
 - All monetary values use `DecimalField` — never `float`
+
+---
+
+## Phase 5 Additions
+
+```
+Django REST Framework (port 8000)
+    │
+    ├── /api/menu/tax-rates/         (menu app — TaxRate)
+    ├── /api/menu/categories/        (menu app — Category)
+    ├── /api/menu/items/             (menu app — MenuItem)
+    ├── /api/menu/prices/            (menu app — MenuItemPrice)
+    ├── /api/menu/availability/      (menu app — MenuItemBranch)
+    ├── /api/menu/branches/{id}/catalog/  (read-optimized POS endpoint)
+    └── /api/menu/dashboard/         (management summary)
+    │
+    └── PostgreSQL 15 additions:
+            menu_taxrate
+            menu_category
+            menu_menuitem
+            menu_menuitemprice
+            menu_menuitemBranch
+```
+
+### Menu Data Flow
+
+```
+Restaurant
+    │ owns
+    ├── TaxRate (named, versioned tax configs)
+    ├── Category (ordered display groups)
+    └── MenuItem (catalog item)
+          │
+          ├── MenuItemPrice (per branch — history preserved)
+          └── MenuItemBranch (per branch — availability + time window)
+```
+
+### Key Design Principles Added in Phase 5
+
+1. **Price isolation**: Prices never live on `MenuItem`. They're on `MenuItemPrice`, scoped to `(menu_item, branch)`.
+2. **Price history**: Price records are never deleted. Deactivate + create new.
+3. **Branch availability**: `MenuItemBranch` tracks `(item, branch)` availability separately from the item's catalog status.
+4. **Timezone-aware time windows**: `available_from/to` are evaluated in the restaurant's configured timezone.
+5. **Tax by reference**: `MenuItem.tax_rate` is a FK — never a duplicated percentage.
+6. **Restaurant isolation**: Every scoped queryset in `menu/access.py` filters by the user's accessible restaurant IDs.
