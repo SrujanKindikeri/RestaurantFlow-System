@@ -50,6 +50,7 @@ LOCAL_APPS = [
     "accounts",
     "core",
     "organizations",
+    "counters",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -360,6 +361,11 @@ LOGGING = {
         },
         "organizations": {
             "handlers": ["console", "file_general"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "counters": {
+            "handlers": ["console", "file_general", "file_errors"],
             "level": LOG_LEVEL,
             "propagate": False,
         },

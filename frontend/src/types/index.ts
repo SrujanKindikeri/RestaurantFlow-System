@@ -361,3 +361,204 @@ export interface OrganizationStats {
   total_branches: number
   active_branches: number
 }
+
+// -----------------------------------------------------------------------------
+// Phase 4 — Counters
+// -----------------------------------------------------------------------------
+
+export type CounterType = 'MAIN_BILLING' | 'TAKEAWAY' | 'SNACKS' | 'DRIVE_THROUGH' | 'OTHER'
+export type CounterStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'
+export type SessionStatus = 'OPEN' | 'CLOSED' | 'FORCE_CLOSED'
+
+export interface Counter {
+  id: string
+  branch: string
+  branch_name: string
+  restaurant_id: string
+  restaurant_name: string
+  organization_id: string
+  name: string
+  code: string
+  description: string
+  counter_type: CounterType
+  location: string
+  status: CounterStatus
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CurrentSessionSummary {
+  id: string
+  opened_by_email: string
+  opened_by_name: string
+  opened_at: string
+  opening_cash: string
+  expected_cash: string
+  status: SessionStatus
+}
+
+export interface ActiveAssignmentSummary {
+  id: string
+  user_id: number
+  user_email: string
+  user_name: string
+  assigned_at: string
+  expires_at: string | null
+}
+
+export interface CounterDetail extends Counter {
+  current_session: CurrentSessionSummary | null
+  active_assignments: ActiveAssignmentSummary[]
+}
+
+export interface CounterCreatePayload {
+  branch: string
+  name: string
+  code: string
+  description?: string
+  counter_type?: CounterType
+  location?: string
+}
+
+export type CounterUpdatePayload = Partial<CounterCreatePayload> & {
+  status?: CounterStatus
+}
+
+// -----------------------------------------------------------------------------
+// Phase 4 — Counter Assignments
+// -----------------------------------------------------------------------------
+
+export interface CounterAssignment {
+  id: string
+  counter: string
+  counter_code: string
+  counter_name: string
+  branch_id: string
+  branch_name: string
+  user: number
+  user_email: string
+  user_name: string
+  assigned_by: number | null
+  assigned_by_email: string | null
+  assigned_at: string
+  expires_at: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CounterAssignmentCreatePayload {
+  counter: string
+  user: number
+  expires_at?: string | null
+}
+
+// -----------------------------------------------------------------------------
+// Phase 4 — Counter Sessions
+// -----------------------------------------------------------------------------
+
+export interface CounterSession {
+  id: string
+  counter: string
+  counter_code: string
+  counter_name: string
+  branch_id: string
+  branch_name: string
+  restaurant_name: string
+  shift: string | null
+  shift_name: string | null
+  opened_by: number
+  opened_by_email: string
+  opened_by_name: string
+  closed_by: number | null
+  closed_by_email: string | null
+  opened_at: string
+  closed_at: string | null
+  opening_cash: string
+  expected_cash: string
+  actual_cash: string | null
+  cash_difference: string | null
+  status: SessionStatus
+  closing_note: string
+  created_at: string
+  updated_at: string
+}
+
+export interface OpenSessionPayload {
+  opening_cash: string
+  shift?: string | null
+}
+
+export interface CloseSessionPayload {
+  actual_cash: string
+  closing_note?: string
+}
+
+export interface ForceCloseSessionPayload {
+  reason: string
+  actual_cash?: string | null
+}
+
+// -----------------------------------------------------------------------------
+// Phase 4 — Shifts
+// -----------------------------------------------------------------------------
+
+export interface Shift {
+  id: string
+  branch: string
+  branch_name: string
+  name: string
+  start_time: string
+  end_time: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ShiftCreatePayload {
+  branch: string
+  name: string
+  start_time: string
+  end_time: string
+}
+
+// -----------------------------------------------------------------------------
+// Phase 4 — Counter Dashboard
+// -----------------------------------------------------------------------------
+
+export interface CounterDashboardItem {
+  id: string
+  code: string
+  name: string
+  counter_type: CounterType
+  status: CounterStatus
+  branch_id: string
+  branch_name: string
+  restaurant_name: string
+  current_session: {
+    id: string
+    opened_by_email: string
+    opened_by_name: string
+    opened_at: string
+    opening_cash: string
+    status: SessionStatus
+  } | null
+  assigned_cashier: {
+    user_id: number
+    user_name: string
+    user_email: string
+  } | null
+}
+
+export interface CounterDashboardResponse {
+  branch_id: string | null
+  counters: CounterDashboardItem[]
+  summary: {
+    total: number
+    active: number
+    sessions_open: number
+    inactive: number
+    maintenance: number
+  }
+}

@@ -547,3 +547,254 @@ List all registered permission codes. Requires `permission.view`.
 | report | `report.sales.view` `report.accounts.view` `report.profit.view` |
 | kitchen | `kitchen.order.view` `kitchen.order.update` |
 | issue | `issue.view` `issue.create` `issue.resolve` |
+
+---
+
+## Phase 4 — Counter API
+
+All counter endpoints require authentication (`Authorization: Bearer <token>`).
+All responses follow the standard error envelope on failure:
+```json
+{ "error": { "code": "ERROR_CODE", "message": "Human-readable message." } }
+```
+
+### GET /api/counters/
+
+List counters scoped to the authenticated user's branches.
+
+**Query params:** `branch=<uuid>`, `status=ACTIVE|INACTIVE|MAINTENANCE`
+
+**Response 200:**
+```json
+{
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "uuid",
+      "branch": "uuid",
+      "branch_name": "LPU Campus",
+      "restaurant_id": "uuid",
+      "restaurant_name": "Spice Garden",
+      "name": "Main Billing",
+      "code": "C01",
+      "counter_type": "MAIN_BILLING",
+      "status": "ACTIVE",
+      "is_active": true
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/counters/
+
+Create a counter. Requires `counter.create`.
+
+**Request:**
+```json
+{
+  "branch": "uuid",
+  "name": "Main Billing",
+  "code": "C01",
+  "counter_type": "MAIN_BILLING",
+  "description": "",
+  "location": "Near entrance"
+}
+```
+
+---
+
+### GET /api/counters/{id}/
+
+Retrieve counter detail including current session summary and active assignments.
+
+---
+
+### PATCH /api/counters/{id}/
+
+Partial update. Requires `counter.update`. Accepts same fields as POST except `branch`.
+
+---
+
+### POST /api/counters/{id}/disable/
+
+Set counter status to `INACTIVE`. Requires `counter.disable`.
+
+---
+
+### POST /api/counters/{id}/reactivate/
+
+Set counter status to `ACTIVE`. Requires `counter.update`.
+
+---
+
+### POST /api/counters/{id}/sessions/open/
+
+Open a new cash session. Requires `counter.session.open`.
+
+**Request:**
+```json
+{
+  "opening_cash": "5000.00",
+  "shift": "uuid"
+}
+```
+
+**Response 201:**
+```json
+{
+  "id": "uuid",
+  "counter": "uuid",
+  "counter_code": "C01",
+  "status": "OPEN",
+  "opening_cash": "5000.00",
+  "expected_cash": "5000.00",
+  "opened_at": "2026-10-02T08:03:00Z",
+  "opened_by_email": "cashier@spicegarden.dev"
+}
+```
+
+**Error codes:** `COUNTER_INACTIVE`, `COUNTER_MAINTENANCE`, `COUNTER_SESSION_ALREADY_OPEN`, `INVALID_OPENING_CASH`
+
+---
+
+### GET /api/counter-sessions/
+
+List sessions. Requires `counter.session.view`.
+
+**Query params:** `counter=<uuid>`, `status=OPEN|CLOSED|FORCE_CLOSED`, `branch=<uuid>`
+
+---
+
+### GET /api/counter-sessions/{id}/
+
+Retrieve session detail.
+
+---
+
+### POST /api/counter-sessions/{id}/close/
+
+Close an open session. Requires `counter.session.close`.
+
+**Request:**
+```json
+{
+  "actual_cash": "9850.00",
+  "closing_note": "Normal closing. All clear."
+}
+```
+
+**Response 200:** Full session with `cash_difference` calculated by backend.
+
+**Error codes:** `COUNTER_SESSION_NOT_OPEN`, `INVALID_ACTUAL_CASH`
+
+---
+
+### POST /api/counter-sessions/{id}/force-close/
+
+Force-close an open session. Requires `counter.session.force_close`.
+
+**Request:**
+```json
+{
+  "reason": "Cashier left unexpectedly",
+  "actual_cash": "4800.00"
+}
+```
+
+**Error codes:** `FORCE_CLOSE_NOT_ALLOWED`, `COUNTER_SESSION_NOT_OPEN`
+
+---
+
+### GET /api/counter-assignments/
+
+List assignments. Requires `counter.view`.
+**Query params:** `counter=<uuid>`, `is_active=true|false`
+
+---
+
+### POST /api/counter-assignments/
+
+Assign a user to a counter. Requires `counter.assign`.
+
+**Request:**
+```json
+{
+  "counter": "uuid",
+  "user": 42,
+  "expires_at": "2026-12-31T23:59:00Z"
+}
+```
+
+---
+
+### POST /api/counter-assignments/{id}/deactivate/
+
+Deactivate an assignment. Requires `counter.unassign`. Historical record is preserved.
+
+---
+
+### GET /api/shifts/
+
+List shifts. Requires `shift.view`.
+**Query params:** `branch=<uuid>`
+
+---
+
+### POST /api/shifts/
+
+Create a shift. Requires `shift.manage`.
+
+**Request:**
+```json
+{
+  "branch": "uuid",
+  "name": "Morning",
+  "start_time": "08:00:00",
+  "end_time": "16:00:00"
+}
+```
+
+---
+
+### GET /api/counter-dashboard/
+
+Branch-level counter status overview. Requires `counter.view`.
+**Query params:** `branch=<uuid>` (optional — returns all accessible if omitted)
+
+**Response 200:**
+```json
+{
+  "branch_id": "uuid",
+  "counters": [
+    {
+      "id": "uuid",
+      "code": "C01",
+      "name": "Main Billing",
+      "status": "ACTIVE",
+      "current_session": {
+        "id": "uuid",
+        "opened_by_name": "Rohit Verma",
+        "opened_at": "2026-10-02T08:03:00Z",
+        "opening_cash": "5000.00",
+        "status": "OPEN"
+      },
+      "assigned_cashier": {
+        "user_id": 5,
+        "user_name": "Rohit Verma",
+        "user_email": "cashier@spicegarden.dev"
+      }
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "active": 2,
+    "sessions_open": 1,
+    "inactive": 0,
+    "maintenance": 1
+  }
+}
+```

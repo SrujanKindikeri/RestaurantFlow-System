@@ -47,6 +47,16 @@ const ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
   ),
+  counters: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+    </svg>
+  ),
+  sessions: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -56,6 +66,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Branches', to: '/branches', permission: 'branch.view', icon: ICONS.branches },
   { label: 'Users', to: '/users', permission: 'user.view', icon: ICONS.users },
   { label: 'Roles', to: '/roles', permission: 'role.view', icon: ICONS.roles },
+  // Phase 4 — Counters
+  { label: 'Counter Dashboard', to: '/counter-dashboard', permission: 'counter.view', icon: ICONS.sessions },
+  { label: 'Counters', to: '/counters', permission: 'counter.view', icon: ICONS.counters },
+  { label: 'Sessions', to: '/counter-sessions', permission: 'counter.session.view', icon: ICONS.sessions },
 ]
 
 export function MainLayout() {
@@ -107,7 +121,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 3</p>
+            <p className="text-[10px] text-gray-600 font-mono">Phase 4</p>
           </div>
         </div>
 
@@ -117,7 +131,7 @@ export function MainLayout() {
             Management
           </p>
           <ul className="space-y-0.5" role="list">
-            {visibleItems.map((item) => (
+            {visibleItems.filter(i => !['counter.view','counter.session.view'].includes(i.permission ?? '')).map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
@@ -138,6 +152,37 @@ export function MainLayout() {
               </li>
             ))}
           </ul>
+
+          {/* Phase 4 — Counters section */}
+          {visibleItems.some(i => ['counter.view','counter.session.view'].includes(i.permission ?? '')) && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Counters & POS
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {visibleItems.filter(i => ['counter.view','counter.session.view'].includes(i.permission ?? '')).map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.to === '/'}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          isActive
+                            ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                            : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                        )
+                      }
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </nav>
 
         {/* User info + logout */}
@@ -189,7 +234,7 @@ export function MainLayout() {
             <div className="hidden sm:flex items-center gap-2">
               <span className="text-xs text-gray-600">{user.email}</span>
               <span className="text-gray-700">·</span>
-              <span className="text-xs text-gray-600 font-mono">Phase 3</span>
+              <span className="text-xs text-gray-600 font-mono">Phase 4</span>
             </div>
           )}
         </header>

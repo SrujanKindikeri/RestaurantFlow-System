@@ -99,6 +99,21 @@ PERMISSIONS = [
     {"code": "issue.view",    "name": "View Issues",    "module": "issue", "action": "view"},
     {"code": "issue.create",  "name": "Create Issue",   "module": "issue", "action": "create"},
     {"code": "issue.resolve", "name": "Resolve Issues", "module": "issue", "action": "resolve"},
+    # Phase 4 — Counters
+    {"code": "counter.view",                  "name": "View Counters",              "module": "counter", "action": "view"},
+    {"code": "counter.create",                "name": "Create Counter",             "module": "counter", "action": "create"},
+    {"code": "counter.update",                "name": "Update Counter",             "module": "counter", "action": "update"},
+    {"code": "counter.disable",               "name": "Disable Counter",            "module": "counter", "action": "disable"},
+    {"code": "counter.assign",                "name": "Assign Counter",             "module": "counter", "action": "assign"},
+    {"code": "counter.unassign",              "name": "Unassign Counter",           "module": "counter", "action": "unassign"},
+    {"code": "counter.session.view",          "name": "View Counter Sessions",      "module": "counter", "action": "session.view"},
+    {"code": "counter.session.open",          "name": "Open Counter Session",       "module": "counter", "action": "session.open"},
+    {"code": "counter.session.close",         "name": "Close Counter Session",      "module": "counter", "action": "session.close"},
+    {"code": "counter.session.force_close",   "name": "Force-Close Counter Session","module": "counter", "action": "session.force_close"},
+    {"code": "counter.reconcile",             "name": "Reconcile Counter Cash",     "module": "counter", "action": "reconcile"},
+    # Phase 4 — Shifts
+    {"code": "shift.view",   "name": "View Shifts",   "module": "shift", "action": "view"},
+    {"code": "shift.manage", "name": "Manage Shifts", "module": "shift", "action": "manage"},
 ]
 
 
@@ -123,6 +138,12 @@ ROLES = [
             "expense.view", "expense.create", "expense.approve",
             "report.sales.view", "report.accounts.view", "report.profit.view",
             "issue.view", "issue.create", "issue.resolve",
+            # Phase 4 — Counters
+            "counter.view", "counter.create", "counter.update", "counter.disable",
+            "counter.assign", "counter.unassign",
+            "counter.session.view", "counter.session.open", "counter.session.close",
+            "counter.session.force_close", "counter.reconcile",
+            "shift.view", "shift.manage",
         ],
     },
     {
@@ -139,6 +160,12 @@ ROLES = [
             "role.view", "role.manage",
             "permission.view",
             "issue.view", "issue.create", "issue.resolve",
+            # Phase 4 — Counters
+            "counter.view", "counter.create", "counter.update", "counter.disable",
+            "counter.assign", "counter.unassign",
+            "counter.session.view", "counter.session.open", "counter.session.close",
+            "counter.session.force_close", "counter.reconcile",
+            "shift.view", "shift.manage",
         ],
     },
     {
@@ -161,6 +188,12 @@ ROLES = [
             "expense.view", "expense.create", "expense.approve",
             "report.sales.view", "report.accounts.view", "report.profit.view",
             "issue.view", "issue.create", "issue.resolve",
+            # Phase 4 — Counters
+            "counter.view", "counter.create", "counter.update", "counter.disable",
+            "counter.assign", "counter.unassign",
+            "counter.session.view", "counter.session.open", "counter.session.close",
+            "counter.session.force_close", "counter.reconcile",
+            "shift.view", "shift.manage",
         ],
     },
     {
@@ -182,6 +215,12 @@ ROLES = [
             "expense.view", "expense.create",
             "report.sales.view",
             "issue.view", "issue.create", "issue.resolve",
+            # Phase 4 — Counters
+            "counter.view", "counter.create", "counter.update",
+            "counter.assign", "counter.unassign",
+            "counter.session.view", "counter.session.open", "counter.session.close",
+            "counter.session.force_close", "counter.reconcile",
+            "shift.view", "shift.manage",
         ],
     },
     {
@@ -194,6 +233,9 @@ ROLES = [
             "order.view", "order.create",
             "bill.view", "bill.create", "bill.print",
             "payment.view", "payment.create",
+            # Phase 4 — Counters (cashier subset)
+            "counter.view",
+            "counter.session.view", "counter.session.open", "counter.session.close",
         ],
     },
     {

@@ -24,7 +24,7 @@ infrastructure exists.
 
 ---
 
-## Phase 2 — Companies, Restaurants & Branches
+## Phase 2 — Companies, Restaurants & Branches ✅
 
 **Goal:** Introduce the core multi-tenant business hierarchy.
 
@@ -37,35 +37,40 @@ infrastructure exists.
 
 ---
 
-## Phase 3 — Users, Roles & Permissions
+## Phase 3 — Users, Roles & Permissions ✅
 
 **Goal:** Role-based access control across the tenant hierarchy.
 
 - Extend `User` model with role and tenant assignment
-- Roles:
-  - Company Head
-  - Restaurant Owner
-  - Branch Manager
-  - Cashier
-  - Waiter
-  - Kitchen Staff
-  - Inventory Manager
-  - Accountant
-- Permission enforcement on all API views
-- Invitation / onboarding flow
-- Frontend: User management screens
+- Roles: Company Head, Central Admin, Restaurant Owner, Restaurant Manager, Cashier, Waiter, Kitchen Staff, Inventory Staff, Accountant
+- `Permission` model with granular codes (e.g. `restaurant.view`, `branch.create`)
+- `UserRoleAssignment` — scoped role assignment (org / restaurant / branch level)
+- Full RBAC enforcement on all API views
+- Scoped querysets — users only see resources within their scope
+- IDOR protection — out-of-scope resources return 404
+- Frontend: User management, role listing, assignment UI
 
 ---
 
-## Phase 4 — Counters & Cash Sessions
+## Phase 4 — Counters & Cash Sessions ✅
 
-**Goal:** Model the physical POS counter and daily cash sessions.
+**Goal:** Model the physical POS counter infrastructure and daily cash sessions.
 
-- `Counter` model (belongs to branch)
-- `CashSession` model (opening balance, closing balance)
-- Open / close session workflow
-- Assign cashier to counter
-- Frontend: Counter management, session open/close
+- `Counter` model (belongs to branch, unique code per branch)
+- `CounterStatus`: ACTIVE / INACTIVE / MAINTENANCE
+- `CounterAssignment` model (cashier ↔ counter link with full history)
+- `Shift` model (schedule configuration per branch)
+- `CounterSession` model (full cash lifecycle: open → close / force-close)
+- `SessionStatus`: OPEN / CLOSED / FORCE_CLOSED
+- Cash reconciliation: `cash_difference = actual_cash − expected_cash`
+- Concurrency protection via `select_for_update()` + DB partial unique constraint
+- Force-close permission for managers
+- All monetary fields use `DecimalField` — never float
+- 13 new counter permissions integrated into all existing roles
+- API: counters, sessions, assignments, shifts, dashboard
+- Frontend: Counter Dashboard, Counter List, Counter Detail, Sessions page
+- ~35 tests covering model, service, concurrency, API security
+- Documentation: `docs/counters.md`, `docs/cash-sessions.md`, `docs/phase-4.md`
 
 ---
 

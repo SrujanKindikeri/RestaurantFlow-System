@@ -258,3 +258,83 @@ organizations  →  accounts  (UserRoleAssignment FKs)
 - Resources outside scope return 404 (no existence leakage)
 - `is_superuser` and `is_staff` cannot be set via the public API
 - JWT refresh tokens are blacklisted on logout
+
+---
+
+## Phase 4 Architecture
+
+```
+Browser (React + Vite, port 5173)
+    │  JWT Bearer token
+    ▼
+Django REST Framework (port 8000)
+    │
+    ├── /api/health/
+    ├── /api/auth/               (accounts)
+    ├── /api/users/              (accounts)
+    ├── /api/roles/              (accounts)
+    ├── /api/organizations/      (organizations — scoped)
+    ├── /api/restaurants/        (organizations — scoped)
+    ├── /api/branches/           (organizations — scoped)
+    ├── /api/counters/           (counters — scoped)     ◄── NEW
+    ├── /api/counter-sessions/   (counters — scoped)     ◄── NEW
+    ├── /api/counter-assignments/(counters — scoped)     ◄── NEW
+    ├── /api/shifts/             (counters — scoped)     ◄── NEW
+    └── /api/counter-dashboard/  (counters — scoped)     ◄── NEW
+    │
+    ├── PostgreSQL 15 (port 5432)
+    │       ... (all Phase 1-3 tables) ...
+    │       counters_counter
+    │       counters_counterassignment
+    │       counters_shift
+    │       counters_countersession          ◄── NEW
+    │
+    └── Redis 7 (port 6379)
+```
+
+### Phase 4 Authorization Flow
+
+```
+Request with Bearer token
+    ↓
+JWTAuthentication
+    ↓
+DRF permission classes:
+    IsAuthenticated
+    → HasPermission("counter.session.open")   (code-based)
+    → HasCounterAccess                         (object-level, branch scope)
+    ↓
+get_queryset() calls counter_acl.get_accessible_counters(user)
+    → delegates to accounts.access.get_accessible_branches(user)
+    ↓
+get_object() from scoped queryset — outside-scope → 404
+    ↓
+Service layer (services.py):
+    → select_for_update() for concurrency safety
+    → Business rule validation
+    → DB write
+    ↓
+Response
+```
+
+### Phase 4 Django App Dependency Graph
+
+```
+counters       →  core          (TimestampedModel)
+counters       →  accounts      (access, permissions)
+counters       →  organizations (Branch FK)
+organizations  →  core
+accounts       →  core
+```
+
+### Phase 4 Security Properties
+
+All Phase 1–3 security properties are preserved, plus:
+
+- Counter UUID PKs — no sequential enumeration
+- Counter scope checks delegate to branch/restaurant/org access layer
+- `cash_difference` always backend-calculated — client value rejected
+- `select_for_update()` + DB partial unique constraint prevents double-open race
+- `force_close` requires explicit elevated permission (`counter.session.force_close`)
+- Closed sessions are immutable — no casual patch endpoint
+- All monetary values use `DecimalField` — never `float`

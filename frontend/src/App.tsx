@@ -1,6 +1,6 @@
 // =============================================================================
 // RestaurantFlow — Application Routes
-// Phase 3: Auth-guarded routes + Users + Roles
+// Phase 4: Counters + Sessions + Dashboard
 // =============================================================================
 
 import { Routes, Route, Navigate } from 'react-router-dom'
@@ -25,6 +25,12 @@ import { BranchDetailPage } from '@/pages/branches/BranchDetailPage'
 import { UsersListPage } from '@/pages/users/UsersListPage'
 import { UserDetailPage } from '@/pages/users/UserDetailPage'
 import { RolesListPage } from '@/pages/roles/RolesListPage'
+
+// Phase 4 — Counters
+import { CountersListPage } from '@/pages/counters/CountersListPage'
+import { CounterDetailPage } from '@/pages/counters/CounterDetailPage'
+import { CounterSessionsPage } from '@/pages/counters/CounterSessionsPage'
+import { CounterDashboardPage } from '@/pages/counters/CounterDashboardPage'
 
 function App() {
   return (
@@ -61,6 +67,12 @@ function App() {
 
           {/* Phase 3 — Roles */}
           <Route path="/roles" element={<RolesListPage />} />
+
+          {/* Phase 4 — Counters */}
+          <Route path="/counters" element={<CountersListPage />} />
+          <Route path="/counters/:id" element={<CounterDetailPage />} />
+          <Route path="/counter-sessions" element={<CounterSessionsPage />} />
+          <Route path="/counter-dashboard" element={<CounterDashboardPage />} />
         </Route>
       </Route>
 

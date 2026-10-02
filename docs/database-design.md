@@ -298,3 +298,120 @@ All other User fields are unchanged from Phase 1.
 - `CASCADE` on user ensures assignments are deleted when a user is deleted.
 - Employee codes are not unique globally — uniqueness within an organization is enforced at the application level (not yet a DB constraint).
 - All UUID fields use `uuid.uuid4` as default — never sequential.
+
+---
+
+## Phase 4 Schema
+
+### New Tables
+
+#### `counters_shift`
+
+| Column       | Type         | Constraints                     |
+|--------------|--------------|---------------------------------|
+| `id`         | UUID PK      | default uuid4                   |
+| `branch_id`  | UUID FK      | → organizations_branch, PROTECT |
+| `name`       | varchar(100) |                                 |
+| `start_time` | time         |                                 |
+| `end_time`   | time         |                                 |
+| `is_active`  | boolean      | default true, indexed           |
+| `created_at` | timestamptz  | auto                            |
+| `updated_at` | timestamptz  | auto                            |
+
+**Indexes:** `(branch_id, is_active)`
+
+---
+
+#### `counters_counter`
+
+| Column         | Type         | Constraints                             |
+|----------------|--------------|-----------------------------------------|
+| `id`           | UUID PK      | default uuid4                           |
+| `branch_id`    | UUID FK      | → organizations_branch, PROTECT         |
+| `name`         | varchar(150) |                                         |
+| `code`         | varchar(20)  | indexed                                 |
+| `description`  | text         | blank                                   |
+| `counter_type` | varchar(20)  | choices, default MAIN_BILLING, indexed  |
+| `location`     | varchar(200) | blank                                   |
+| `status`       | varchar(20)  | choices, default ACTIVE, indexed        |
+| `is_active`    | boolean      | derived from status==ACTIVE, indexed    |
+| `created_at`   | timestamptz  | auto                                    |
+| `updated_at`   | timestamptz  | auto                                    |
+
+**Unique constraint:** `UNIQUE (branch_id, code)` — name: `unique_counter_code_per_branch`
+
+**Indexes:** `(branch_id, status)`, `(branch_id, is_active)`, `(branch_id, code)`
+
+---
+
+#### `counters_counterassignment`
+
+| Column          | Type        | Constraints                              |
+|-----------------|-------------|------------------------------------------|
+| `id`            | UUID PK     | default uuid4                            |
+| `counter_id`    | UUID FK     | → counters_counter, PROTECT              |
+| `user_id`       | int FK      | → accounts_user, PROTECT                 |
+| `assigned_by_id`| int FK      | → accounts_user, PROTECT, nullable       |
+| `assigned_at`   | timestamptz | auto                                     |
+| `expires_at`    | timestamptz | nullable                                 |
+| `is_active`     | boolean     | default true, indexed                    |
+| `created_at`    | timestamptz | auto                                     |
+| `updated_at`    | timestamptz | auto                                     |
+
+**Indexes:** `(counter_id, is_active)`, `(user_id, is_active)`, `(counter_id, user_id, is_active)`
+
+---
+
+#### `counters_countersession`
+
+| Column            | Type           | Constraints                                    |
+|-------------------|----------------|------------------------------------------------|
+| `id`              | UUID PK        | default uuid4                                  |
+| `counter_id`      | UUID FK        | → counters_counter, PROTECT                    |
+| `shift_id`        | UUID FK        | → counters_shift, SET_NULL, nullable           |
+| `opened_by_id`    | int FK         | → accounts_user, PROTECT                       |
+| `closed_by_id`    | int FK         | → accounts_user, PROTECT, nullable             |
+| `opened_at`       | timestamptz    | auto                                           |
+| `closed_at`       | timestamptz    | nullable                                       |
+| `opening_cash`    | decimal(12,2)  | default 0.00                                   |
+| `expected_cash`   | decimal(12,2)  | default 0.00                                   |
+| `actual_cash`     | decimal(12,2)  | nullable                                       |
+| `cash_difference` | decimal(12,2)  | nullable. Calculated: actual − expected.       |
+| `status`          | varchar(20)    | choices: OPEN/CLOSED/FORCE_CLOSED, indexed     |
+| `closing_note`    | text           | blank                                          |
+| `created_at`      | timestamptz    | auto                                           |
+| `updated_at`      | timestamptz    | auto                                           |
+
+**Partial unique constraint (PostgreSQL):**  
+`UNIQUE (counter_id) WHERE status = 'OPEN'` — name: `unique_open_session_per_counter`  
+This guarantees at most one OPEN session per counter at the database level.
+
+**Indexes:** `(counter_id, status)`, `(opened_by_id, status)`, `(counter_id, opened_at)`
+
+---
+
+### Entity Relationship (Phase 4 additions)
+
+```
+organizations_branch
+        │
+        ├── counters_shift (M)
+        │
+        └── counters_counter (M)
+                │
+                ├── counters_counterassignment (M)
+                │       │
+                │       └── accounts_user (assigned user)
+                │
+                └── counters_countersession (M)
+                        │
+                        ├── accounts_user (opened_by)
+                        ├── accounts_user (closed_by, nullable)
+                        └── counters_shift (nullable)
+```
+
+### Financial Data Integrity
+
+All monetary columns (`opening_cash`, `expected_cash`, `actual_cash`, `cash_difference`) are `DECIMAL(12, 2)`. This supports values up to ₹9,999,999,999.99 with exact decimal precision — no floating-point rounding errors.
+
+`cash_difference` is always written by the backend service (`actual_cash − expected_cash`). No client-submitted value is accepted as authoritative.
