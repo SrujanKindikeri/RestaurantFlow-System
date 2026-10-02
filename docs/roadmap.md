@@ -1,0 +1,212 @@
+# RestaurantFlow — Development Roadmap
+
+## Overview
+
+RestaurantFlow is built in structured phases. Each phase builds on the
+foundation of the previous one. No phase skips ahead or assumes future
+infrastructure exists.
+
+---
+
+## Phase 1 — Foundation ✅
+
+**Goal:** Clean, scalable technical foundation.
+
+- Django + DRF + PostgreSQL + Redis
+- React + TypeScript + Vite + Tailwind
+- Custom User model (email-based)
+- JWT authentication foundation
+- Health check API endpoint
+- Docker Compose for infrastructure
+- Logging, CORS, security defaults
+- Full project documentation
+- Git repository initialized
+
+---
+
+## Phase 2 — Companies, Restaurants & Branches
+
+**Goal:** Introduce the core multi-tenant business hierarchy.
+
+- `Organization` model (company / head office)
+- `Restaurant` model (belongs to organization)
+- `Branch` model (belongs to restaurant)
+- CRUD API endpoints for all three
+- Ownership and access relationship foundation
+- Frontend: Organization and restaurant management screens
+
+---
+
+## Phase 3 — Users, Roles & Permissions
+
+**Goal:** Role-based access control across the tenant hierarchy.
+
+- Extend `User` model with role and tenant assignment
+- Roles:
+  - Company Head
+  - Restaurant Owner
+  - Branch Manager
+  - Cashier
+  - Waiter
+  - Kitchen Staff
+  - Inventory Manager
+  - Accountant
+- Permission enforcement on all API views
+- Invitation / onboarding flow
+- Frontend: User management screens
+
+---
+
+## Phase 4 — Counters & Cash Sessions
+
+**Goal:** Model the physical POS counter and daily cash sessions.
+
+- `Counter` model (belongs to branch)
+- `CashSession` model (opening balance, closing balance)
+- Open / close session workflow
+- Assign cashier to counter
+- Frontend: Counter management, session open/close
+
+---
+
+## Phase 5 — Menu
+
+**Goal:** Build the full menu catalog.
+
+- `MenuCategory` model
+- `MenuItem` model (price, description, availability)
+- `MenuItemVariant` model (sizes, add-ons)
+- Menu availability by branch
+- Frontend: Menu builder screens
+
+---
+
+## Phase 6 — Tables, Orders & POS
+
+**Goal:** The core POS workflow — take orders, manage tables.
+
+- `Table` model (belongs to branch, with QR code support)
+- `Order` model (dine-in, takeaway, delivery)
+- `OrderItem` model
+- Order status flow: `pending → in_kitchen → ready → served → billed`
+- Frontend: POS order entry interface, table map
+
+---
+
+## Phase 7 — Kitchen Display System
+
+**Goal:** Real-time kitchen ticket management.
+
+- Kitchen display view (WebSocket via Django Channels)
+- Ticket status: `received → preparing → ready`
+- Per-station routing (grill, cold, drinks)
+- Frontend: Kitchen Display Screen (KDS)
+
+---
+
+## Phase 8 — Billing & Payments
+
+**Goal:** Generate bills and record payments.
+
+- `Bill` model (linked to order, immutable once issued)
+- `Payment` model (cash, card, split payments)
+- Tax calculation
+- Discount application (with approval flow)
+- Receipt generation
+- Frontend: Billing screen, payment UI
+
+---
+
+## Phase 9 — Approvals, Audit & Issue Tracking
+
+**Goal:** Manager oversight and audit trail.
+
+- Approval workflow for discounts, voids, refunds
+- `AuditLog` model (every sensitive action logged)
+- Issue tracking for operational problems
+- Frontend: Manager approval screens, audit log viewer
+
+---
+
+## Phase 10 — Inventory Management
+
+**Goal:** Track stock levels and consumption.
+
+- `InventoryItem` model
+- `StockMovement` model (purchase, consumption, adjustment, waste)
+- Low-stock alerts
+- Menu item ↔ ingredient linkage
+- Frontend: Inventory screens
+
+---
+
+## Phase 11 — Accounts (Financial Accounting)
+
+**Goal:** Basic accounting and financial records.
+
+- `Account` model (chart of accounts)
+- `JournalEntry` model (double-entry bookkeeping foundation)
+- Cash flow summary
+- Expense recording
+- Frontend: Accounting overview screens
+
+---
+
+## Phase 12 — Restaurant Analytics
+
+**Goal:** Per-restaurant reporting and insights.
+
+- Sales reports (daily, weekly, monthly)
+- Top-selling items
+- Revenue by branch / counter / cashier
+- Kitchen performance metrics
+- Frontend: Analytics dashboard
+
+---
+
+## Phase 13 — Central Control Center
+
+**Goal:** Cross-restaurant overview for company heads.
+
+- Multi-restaurant dashboard
+- Aggregate sales across branches
+- Comparative reporting
+- Real-time status of all branches
+- Frontend: Central Control Center screens
+
+---
+
+## Phase 14 — Security, Monitoring & Notifications
+
+**Goal:** Production-grade security and observability.
+
+- Two-factor authentication
+- Session management and device tracking
+- Rate limiting
+- Anomaly detection (unusual sales, void patterns)
+- Push / email notifications
+- Sentry integration for error tracking
+- Structured logging for external log aggregation
+
+---
+
+## Phase 15 — Production Deployment
+
+**Goal:** Deploy to AWS in a production-ready configuration.
+
+- Dockerfile for backend and frontend
+- Nginx reverse proxy configuration
+- Gunicorn / Daphne (ASGI) configuration
+- AWS infrastructure (EC2/ECS, RDS PostgreSQL, ElastiCache Redis)
+- SSL / HTTPS with Let's Encrypt or ACM
+- Environment-based configuration for production
+- CI/CD pipeline (GitHub Actions)
+- Backup strategy for database
+- Health monitoring and alerting
+
+---
+
+## Timeline Note
+
+Each phase is a discrete, testable milestone. Phase N is not started until
+Phase N-1 passes all acceptance criteria and is reviewed.

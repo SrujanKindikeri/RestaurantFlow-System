@@ -1,0 +1,40 @@
+# =============================================================================
+# RestaurantFlow — Backend Requirements
+# Phase 1 Foundation
+# =============================================================================
+
+# Core Django
+Django==4.2.16
+djangorestframework==3.15.2
+
+# Database
+psycopg2-binary==2.9.9
+
+# Authentication
+djangorestframework-simplejwt==5.3.1
+
+# CORS
+django-cors-headers==4.4.0
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Django Channels (WebSocket-ready)
+channels==4.1.0
+channels-redis==4.2.0
+
+# Redis client
+redis==5.0.8
+
+# Celery (background tasks — foundation only)
+celery==5.4.0
+django-celery-beat==2.7.0
+django-celery-results==2.5.1
+
+# Utilities
+Pillow==10.4.0
+django-filter==24.3
+
+# Development
+gunicorn==23.0.0
+whitenoise==6.7.0

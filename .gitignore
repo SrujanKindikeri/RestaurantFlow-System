@@ -1,0 +1,123 @@
+# =============================================================================
+# RestaurantFlow — .gitignore
+# =============================================================================
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.manifest
+*.spec
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env_venv/
+
+# Environment files (NEVER commit real secrets)
+.env
+.env.local
+.env.production
+.env.staging
+backend/.env
+frontend/.env
+
+# Database
+*.sqlite3
+*.db
+db.sqlite3
+
+# Django collected static / media
+backend/staticfiles/
+backend/mediafiles/
+backend/static/
+backend/media/
+
+# Django migrations (keep the files, just note this)
+# DO NOT add migrations/ here — migrations must be committed
+
+# Logs
+*.log
+logs/
+backend/logs/
+
+# Coverage / Test artifacts
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+.npm
+.yarn-integrity
+.pnp.*
+.yarn/
+
+# Vite / Build outputs
+frontend/.vite/
+dist/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Redis dump
+dump.rdb
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
