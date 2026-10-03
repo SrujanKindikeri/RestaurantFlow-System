@@ -71,6 +71,12 @@ import { WastagePage } from '@/pages/inventory/WastagePage'
 import { AdjustmentsPage } from '@/pages/inventory/AdjustmentsPage'
 import { StockHistoryPage } from '@/pages/inventory/StockHistoryPage'
 
+// Phase 11 — Recipes & Consumption
+import { RecipesPage } from '@/pages/recipes/RecipesPage'
+import { RecipeDetailPage } from '@/pages/recipes/RecipeDetailPage'
+import { CreateRecipePage } from '@/pages/recipes/CreateRecipePage'
+import { ConsumptionHistoryPage } from '@/pages/inventory/ConsumptionHistoryPage'
+
 function App() {
   return (
     <Routes>
@@ -160,6 +166,12 @@ function App() {
           <Route path="/inventory/wastage" element={<WastagePage />} />
           <Route path="/inventory/adjustments" element={<AdjustmentsPage />} />
           <Route path="/inventory/movements" element={<StockHistoryPage />} />
+
+          {/* Phase 11 — Recipes & Consumption */}
+          <Route path="/recipes" element={<RecipesPage />} />
+          <Route path="/recipes/new" element={<CreateRecipePage />} />
+          <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+          <Route path="/inventory/consumption" element={<ConsumptionHistoryPage />} />
         </Route>
       </Route>
 

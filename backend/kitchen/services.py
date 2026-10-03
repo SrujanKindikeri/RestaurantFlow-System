@@ -367,6 +367,12 @@ def mark_order_ready(actor, *, kitchen_order) -> "KitchenOrder":
     )
 
     publish_kitchen_event("kitchen.order.ready", locked)
+
+    # Phase 11 — Trigger inventory consumption after kitchen order is READY.
+    # Called outside the transaction so that DB state is fully committed before
+    # consumption begins. Failure is non-fatal: the kitchen order remains READY.
+    _trigger_inventory_consumption(locked, actor)
+
     return locked
 
 
@@ -581,6 +587,8 @@ def mark_item_ready(actor, *, kitchen_item) -> "KitchenOrderItem":
     # Publish order ready event if auto-advanced
     if order_auto_readied:
         publish_kitchen_event("kitchen.order.ready", parent_order)
+        # Phase 11 — Trigger inventory consumption after auto-advance to READY.
+        _trigger_inventory_consumption(parent_order, actor)
 
     return locked_item
 
@@ -642,6 +650,45 @@ def update_kitchen_priority(actor, *, kitchen_order, priority) -> "KitchenOrder"
         new_priority=priority,
     )
     return locked
+
+
+# =============================================================================
+# Phase 11 — Inventory Consumption Bridge
+# =============================================================================
+
+def _trigger_inventory_consumption(kitchen_order, actor) -> None:
+    """
+    Trigger recipe-based inventory consumption after a KitchenOrder reaches READY.
+
+    Called AFTER the kitchen transaction commits — never inside it.
+    Delegates entirely to the recipes service layer; any failure is logged
+    but does NOT affect the kitchen order state (kitchen remains READY).
+
+    The recipes service is responsible for:
+        - Idempotency (duplicate calls produce only one batch)
+        - Atomic stock deduction (all-or-nothing)
+        - Recording failure reason on the ConsumptionBatch
+    """
+    try:
+        from recipes.services import trigger_consumption_for_kitchen_order
+        batch = trigger_consumption_for_kitchen_order(kitchen_order, actor)
+        if batch is not None:
+            logger.info(
+                "_trigger_inventory_consumption: batch=%s status=%s for order=%s",
+                batch.id, batch.status, kitchen_order.order_number,
+            )
+        else:
+            logger.debug(
+                "_trigger_inventory_consumption: no batch created for order=%s "
+                "(trigger may not match configured setting)",
+                kitchen_order.order_number,
+            )
+    except Exception as exc:
+        # Consumption failure must never crash the kitchen service
+        logger.error(
+            "_trigger_inventory_consumption: FAILED for order=%s error=%s",
+            kitchen_order.order_number, exc,
+        )
 
 
 # =============================================================================

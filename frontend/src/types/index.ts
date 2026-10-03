@@ -1965,3 +1965,262 @@ export interface CreateStockAdjustmentPayload {
   unit: UnitOfMeasurement
   reason: string
 }
+
+// =============================================================================
+// Phase 11 — Recipes & Inventory Consumption Types
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+export type RecipeStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'
+export type ConsumptionTrigger = 'KITCHEN_STARTED' | 'KITCHEN_COMPLETED'
+export type BatchStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REVERSED'
+export type ConsumptionStatus = 'PENDING' | 'CONSUMED' | 'FAILED' | 'REVERSED'
+
+// ---------------------------------------------------------------------------
+// RecipeItem (ingredient line)
+// ---------------------------------------------------------------------------
+
+export interface RecipeItem {
+  id: string
+  recipe: string
+  inventory_item: string
+  inventory_item_name: string
+  inventory_item_sku: string
+  inventory_item_unit: UnitOfMeasurement
+  quantity: string
+  unit: UnitOfMeasurement
+  preparation_loss_percentage: string
+  effective_quantity: string
+  notes: string
+  display_order: number
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Recipe (list)
+// ---------------------------------------------------------------------------
+
+export interface Recipe {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  menu_item: string
+  menu_item_name: string
+  name: string
+  version: number
+  status: RecipeStatus
+  yield_quantity: string
+  yield_unit: UnitOfMeasurement
+  effective_from: string | null
+  effective_to: string | null
+  created_by: number | null
+  created_by_email: string | null
+  approved_by: number | null
+  approved_by_email: string | null
+  approved_at: string | null
+  ingredient_count: number
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Recipe (detail — includes ingredients)
+// ---------------------------------------------------------------------------
+
+export interface RecipeDetail extends Recipe {
+  preparation_notes: string
+  ingredients: RecipeItem[]
+}
+
+// ---------------------------------------------------------------------------
+// Recipe cost
+// ---------------------------------------------------------------------------
+
+export interface RecipeCostIngredient {
+  inventory_item_id: string
+  inventory_item_name: string
+  recipe_quantity: string
+  recipe_unit: UnitOfMeasurement
+  preparation_loss_percentage: string
+  effective_quantity: string
+  converted_quantity: string
+  item_unit: UnitOfMeasurement
+  unit_cost: string
+  line_cost: string
+}
+
+export interface RecipeCost {
+  recipe_id: string
+  recipe_name: string
+  version: number
+  status: RecipeStatus
+  yield_quantity: string
+  yield_unit: UnitOfMeasurement
+  total_cost: string
+  ingredients: RecipeCostIngredient[]
+}
+
+// ---------------------------------------------------------------------------
+// StockConsumption
+// ---------------------------------------------------------------------------
+
+export interface StockConsumption {
+  id: string
+  batch: string
+  order: string | null
+  order_number: string | null
+  order_item: string | null
+  restaurant: string
+  branch: string
+  branch_name: string
+  recipe: string | null
+  recipe_version: number | null
+  menu_item_name: string | null
+  inventory_item: string
+  inventory_item_name: string
+  inventory_item_sku: string
+  storage_location: string
+  location_name: string
+  quantity: string
+  unit: UnitOfMeasurement
+  unit_cost: string
+  total_cost: string
+  status: ConsumptionStatus
+  consumed_at: string | null
+  consumed_by: number | null
+  consumed_by_email: string | null
+  reference_type: string
+  reference_id: string | null
+  created_at: string
+}
+
+// ---------------------------------------------------------------------------
+// ConsumptionBatch (list)
+// ---------------------------------------------------------------------------
+
+export interface ConsumptionBatch {
+  id: string
+  order: string | null
+  order_number: string | null
+  branch: string
+  branch_name: string
+  status: BatchStatus
+  trigger: string
+  triggered_by: number | null
+  triggered_by_email: string | null
+  triggered_at: string
+  completed_at: string | null
+  failure_reason: string
+  consumption_count: number
+  total_cost: string
+  created_at: string
+}
+
+// ---------------------------------------------------------------------------
+// ConsumptionBatch (detail — includes consumption items)
+// ---------------------------------------------------------------------------
+
+export interface ConsumptionBatchDetail extends ConsumptionBatch {
+  items: StockConsumption[]
+}
+
+// ---------------------------------------------------------------------------
+// BranchConsumptionConfig
+// ---------------------------------------------------------------------------
+
+export interface BranchConsumptionConfig {
+  id: string
+  branch: string
+  branch_name: string
+  consumption_trigger: ConsumptionTrigger
+  default_consumption_location: string | null
+  location_name: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// API Payload types — Recipes
+// ---------------------------------------------------------------------------
+
+export interface CreateRecipePayload {
+  restaurant_id: string
+  menu_item_id: string
+  name: string
+  yield_quantity?: string
+  yield_unit?: UnitOfMeasurement
+  preparation_notes?: string
+  effective_from?: string | null
+  effective_to?: string | null
+}
+
+export interface UpdateRecipePayload {
+  name?: string
+  yield_quantity?: string
+  yield_unit?: UnitOfMeasurement
+  preparation_notes?: string
+  effective_from?: string | null
+  effective_to?: string | null
+}
+
+export interface AddRecipeItemPayload {
+  inventory_item_id: string
+  quantity: string
+  unit: UnitOfMeasurement
+  preparation_loss_percentage?: string
+  notes?: string
+  display_order?: number
+}
+
+export interface UpdateRecipeItemPayload {
+  quantity?: string
+  unit?: UnitOfMeasurement
+  preparation_loss_percentage?: string
+  notes?: string
+  display_order?: number
+}
+
+// ---------------------------------------------------------------------------
+// API Payload types — Consumption
+// ---------------------------------------------------------------------------
+
+export interface ManualConsumptionPayload {
+  branch_id: string
+  inventory_item_id: string
+  storage_location_id: string
+  quantity: string
+  unit: UnitOfMeasurement
+  reason: string
+}
+
+export interface ReversalPayload {
+  reason?: string
+}
+
+export interface UpdateBranchConsumptionConfigPayload {
+  branch_id: string
+  consumption_trigger?: ConsumptionTrigger
+  default_consumption_location_id?: string | null
+}
+
+// ---------------------------------------------------------------------------
+// List filter params
+// ---------------------------------------------------------------------------
+
+export interface RecipeListParams {
+  restaurant?: string
+  menu_item?: string
+  status?: RecipeStatus
+  search?: string
+}
+
+export interface ConsumptionListParams {
+  branch?: string
+  status?: BatchStatus
+  date?: string
+  order?: string
+}

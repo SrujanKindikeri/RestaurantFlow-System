@@ -188,6 +188,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Adjustments', to: '/inventory/adjustments', permission: 'inventory.adjust', icon: ICONS.adjustments },
   { label: 'Suppliers', to: '/inventory/suppliers', permission: 'supplier.view', icon: ICONS.suppliers },
   { label: 'Stock History', to: '/inventory/movements', permission: 'stock.movement.view', icon: ICONS.stockHistory },
+  // Phase 11 — Recipes & Consumption
+  { label: 'Recipes', to: '/recipes', permission: 'recipe.view', icon: ICONS.inventory },
+  { label: 'Consumption', to: '/inventory/consumption', permission: 'inventory.consumption.view', icon: ICONS.stock },
 ]
 
 const COUNTER_PERMS = new Set(['counter.view', 'counter.session.view'])
@@ -198,6 +201,9 @@ const INVENTORY_PERMS = new Set([
   'supplier.view', 'supplier.create', 'supplier.update',
   'purchase.view', 'purchase.create', 'purchase.submit', 'purchase.approve',
   'purchase.receive', 'purchase.cancel', 'stock.movement.view',
+  // Phase 11
+  'recipe.view', 'recipe.create', 'recipe.update', 'recipe.activate', 'recipe.archive',
+  'inventory.consumption.view', 'inventory.consumption.manual', 'inventory.consumption.reverse',
 ])const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
 const ORDER_PERMS = new Set(['table.view', 'order.view.branch', 'order.create.dine_in', 'order.create.counter', 'order.create.takeaway'])
 const KITCHEN_PERMS = new Set(['kitchen.view', 'kitchen.view_history'])
@@ -252,7 +258,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 10</p>
+            <p className="text-[10px] text-gray-600 font-mono">Phase 11</p>
           </div>
         </div>
 
