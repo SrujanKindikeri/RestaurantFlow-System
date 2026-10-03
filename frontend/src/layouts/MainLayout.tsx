@@ -77,6 +77,16 @@ const ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
     </svg>
   ),
+  kitchen: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+  ),
+  kitchenHistory: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -101,11 +111,15 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Tables', to: '/tables', permission: 'table.view', icon: ICONS.tables },
   { label: 'Orders', to: '/orders', permission: 'order.view.branch', icon: ICONS.orders },
   { label: 'POS', to: '/pos', permission: 'order.create.counter', icon: ICONS.pos },
+  // Phase 7 — Kitchen
+  { label: 'Kitchen Display', to: '/kitchen', permission: 'kitchen.view', icon: ICONS.kitchen },
+  { label: 'Kitchen History', to: '/kitchen/history', permission: 'kitchen.view_history', icon: ICONS.kitchenHistory },
 ]
 
 const COUNTER_PERMS = new Set(['counter.view', 'counter.session.view'])
 const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
 const ORDER_PERMS = new Set(['table.view', 'order.view.branch', 'order.create.dine_in', 'order.create.counter', 'order.create.takeaway'])
+const KITCHEN_PERMS = new Set(['kitchen.view', 'kitchen.view_history'])
 
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -156,7 +170,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 6</p>
+            <p className="text-[10px] text-gray-600 font-mono">Phase 7</p>
           </div>
         </div>
 
@@ -166,7 +180,7 @@ export function MainLayout() {
             Management
           </p>
           <ul className="space-y-0.5" role="list">
-            {visibleItems.filter(i => !COUNTER_PERMS.has(i.permission ?? '') && !MENU_PERMS.has(i.permission ?? '')).map((item) => (
+            {visibleItems.filter(i => !COUNTER_PERMS.has(i.permission ?? '') && !MENU_PERMS.has(i.permission ?? '') && !KITCHEN_PERMS.has(i.permission ?? '')).map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
@@ -262,6 +276,37 @@ export function MainLayout() {
                     <NavLink
                       to={item.to}
                       end={item.to === '/tables' || item.to === '/orders'}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          isActive
+                            ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                            : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                        )
+                      }
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {/* Phase 7 — Kitchen section */}
+          {visibleItems.some(i => KITCHEN_PERMS.has(i.permission ?? '')) && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Kitchen
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {visibleItems.filter(i => KITCHEN_PERMS.has(i.permission ?? '')).map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.to === '/kitchen'}
                       onClick={() => setSidebarOpen(false)}
                       className={({ isActive }) =>
                         cn(

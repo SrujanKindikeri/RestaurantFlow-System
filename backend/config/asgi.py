@@ -1,6 +1,6 @@
 # =============================================================================
 # RestaurantFlow — ASGI Configuration
-# WebSocket-ready via Django Channels
+# Phase 7: WebSocket support via Django Channels
 # =============================================================================
 
 import os
@@ -13,11 +13,16 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 # Initialize Django ASGI application early to ensure the AppRegistry is populated
 django_asgi_app = get_asgi_application()
 
+# Import WebSocket URL patterns after Django is fully initialized
+from kitchen.routing import websocket_urlpatterns  # noqa: E402
+
 application = ProtocolTypeRouter(
     {
-        # HTTP requests → standard Django ASGI handler
+        # HTTP → standard Django ASGI handler
         "http": django_asgi_app,
-        # WebSocket requests — routes will be added in future phases
-        # "websocket": AuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
+        # WebSocket → Channels + JWT auth
+        "websocket": AuthMiddlewareStack(
+            URLRouter(websocket_urlpatterns)
+        ),
     }
 )

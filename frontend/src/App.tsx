@@ -1,6 +1,6 @@
 // =============================================================================
 // RestaurantFlow — Application Routes
-// Phase 6: Tables + Orders + POS
+// Phase 7: Kitchen Display System added
 // =============================================================================
 
 import { Routes, Route, Navigate } from 'react-router-dom'
@@ -45,6 +45,10 @@ import { TablesDashboard } from '@/pages/tables/TablesDashboard'
 import { OrderListPage } from '@/pages/orders/OrderListPage'
 import { OrderDetailPage } from '@/pages/orders/OrderDetailPage'
 import { POSOrderScreen } from '@/pages/orders/POSOrderScreen'
+
+// Phase 7 — Kitchen Display System
+import { KitchenDashboard } from '@/pages/kitchen/KitchenDashboard'
+import { KitchenHistory } from '@/pages/kitchen/KitchenHistory'
 
 function App() {
   return (
@@ -110,6 +114,10 @@ function App() {
           <Route path="/orders" element={<OrderListPage />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/orders/new" element={<POSOrderScreen />} />
+
+          {/* Phase 7 — Kitchen Display System */}
+          <Route path="/kitchen" element={<KitchenDashboard />} />
+          <Route path="/kitchen/history" element={<KitchenHistory />} />
         </Route>
       </Route>
 

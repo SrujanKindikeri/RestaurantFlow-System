@@ -53,6 +53,7 @@ LOCAL_APPS = [
     "counters",
     "menu",
     "orders",
+    "kitchen",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -383,6 +384,11 @@ LOGGING = {
             "propagate": False,
         },
         "billing": {
+            "handlers": ["console", "file_general", "file_errors"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "kitchen": {
             "handlers": ["console", "file_general", "file_errors"],
             "level": LOG_LEVEL,
             "propagate": False,

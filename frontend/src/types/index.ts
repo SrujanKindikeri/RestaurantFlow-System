@@ -985,3 +985,130 @@ export interface POSCart {
   order_number: string | null
   items: DraftOrderItem[]
 }
+
+// =============================================================================
+// Phase 7 — Kitchen / KDS
+// =============================================================================
+
+export type KitchenOrderStatus = 'NEW' | 'ACCEPTED' | 'PREPARING' | 'READY' | 'CANCELLED'
+export type KitchenItemStatus  = 'NEW' | 'PREPARING' | 'READY' | 'CANCELLED'
+export type KitchenPriority    = 'NORMAL' | 'HIGH' | 'URGENT'
+
+export interface KitchenOrderItem {
+  id: string
+  order_item: string
+  menu_item: string
+  item_name_snapshot: string
+  quantity: string
+  notes: string
+  food_type: string
+  preparation_time_minutes: number
+  status: KitchenItemStatus
+  station: string
+  started_at: string | null
+  ready_at: string | null
+  cancelled_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface KitchenOrder {
+  id: string
+  order: string
+  order_number: string
+  order_type: 'DINE_IN' | 'TAKEAWAY' | 'COUNTER'
+  order_notes: string
+  branch: string
+  branch_name: string
+  restaurant_id: string
+  restaurant_name: string
+  table_number: string | null
+  table_section: string | null
+  counter_code: string | null
+  counter_name: string | null
+  assigned_waiter_name: string | null
+  status: KitchenOrderStatus
+  priority: KitchenPriority
+  kitchen_note: string
+  received_at: string
+  accepted_at: string | null
+  started_at: string | null
+  ready_at: string | null
+  cancelled_at: string | null
+  age_seconds: number
+  item_count: number
+  items: KitchenOrderItem[]
+  accepted_by_name: string | null
+  started_by_name: string | null
+  completed_by_name: string | null
+  cancelled_by_name: string | null
+  cancelled_by: number | null
+  cancellation_reason: string
+  created_at: string
+  updated_at: string
+}
+
+export interface KitchenOrdersParams {
+  branch?: string
+  status?: KitchenOrderStatus
+  order_type?: string
+  priority?: KitchenPriority
+  table?: string
+  counter?: string
+  date?: string
+  include_ready?: boolean
+  include_cancelled?: boolean
+  ordering?: string
+}
+
+export interface KitchenHistoryParams {
+  branch?: string
+  date?: string
+  date_from?: string
+  date_to?: string
+  status?: KitchenOrderStatus
+  order_type?: string
+  ordering?: string
+}
+
+// WebSocket event types
+export type KitchenEventType =
+  | 'kitchen.order.created'
+  | 'kitchen.order.accepted'
+  | 'kitchen.order.preparing'
+  | 'kitchen.order.ready'
+  | 'kitchen.order.cancelled'
+  | 'kitchen.item.preparing'
+  | 'kitchen.item.ready'
+  | 'kitchen.priority.changed'
+
+export interface KitchenEvent {
+  event_id: string
+  event: KitchenEventType
+  kitchen_order_id: string
+  order_id: string
+  order_number: string
+  order_type: string
+  status: KitchenOrderStatus
+  priority: KitchenPriority
+  branch_id: string
+  received_at: string
+  timestamp: string
+  table: string | null
+  counter: string | null
+  item_id?: string
+  item_name?: string
+  old_priority?: KitchenPriority
+  new_priority?: KitchenPriority
+}
+
+export interface KitchenSyncMessage {
+  type: 'kitchen.sync'
+  branch_id: string
+  orders: KitchenOrder[]
+}
+
+export interface KitchenEventMessage {
+  type: 'kitchen.event'
+  payload: KitchenEvent
+}
