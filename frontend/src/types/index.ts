@@ -1112,3 +1112,199 @@ export interface KitchenEventMessage {
   type: 'kitchen.event'
   payload: KitchenEvent
 }
+
+// =============================================================================
+// Phase 8 — Billing
+// =============================================================================
+
+export type BillStatus = 'DRAFT' | 'FINALIZED' | 'CANCELLED' | 'VOID'
+export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT'
+export type CorrectionType = 'ITEM_CORRECTION' | 'DISCOUNT_CORRECTION' | 'TAX_CORRECTION' | 'CANCELLATION'
+export type CorrectionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+
+export interface BillItem {
+  id: string
+  order_item: string
+  menu_item: string
+  item_name_snapshot: string
+  sku_snapshot: string
+  quantity: string
+  unit_price: string
+  gross_amount: string
+  discount_amount: string
+  taxable_amount: string
+  tax_rate: string
+  tax_code: string
+  tax_amount: string
+  total_amount: string
+  created_at: string
+}
+
+export interface Bill {
+  id: string
+  bill_number: string
+  order: string
+  order_number: string | null
+  order_type: OrderType | null
+  branch: string
+  branch_name: string
+  restaurant_id: string
+  restaurant_name: string
+  organization_id: string
+  table_number: string | null
+  counter_code: string | null
+  counter_session: string | null
+  status: BillStatus
+  discount_type: DiscountType | null
+  discount_value: string
+  subtotal: string
+  discount_amount: string
+  taxable_amount: string
+  tax_amount: string
+  tax_breakdown: Record<string, string>
+  rounding_amount: string
+  grand_total: string
+  notes: string
+  created_by: number
+  created_by_email: string | null
+  created_by_name: string | null
+  finalized_by: number | null
+  finalized_by_email: string | null
+  finalized_by_name: string | null
+  finalized_at: string | null
+  cancelled_by: number | null
+  cancelled_by_email: string | null
+  cancelled_at: string | null
+  cancellation_reason: string
+  correction_count: number
+  has_pending_correction: boolean
+  items: BillItem[]
+  created_at: string
+  updated_at: string
+}
+
+export type BillSummary = Omit<Bill, 'items' | 'tax_breakdown' | 'organization_id' | 'table_number' | 'counter_code' | 'counter_session'>
+
+export interface BillCalculation {
+  subtotal: string
+  discount_amount: string
+  taxable_amount: string
+  tax_amount: string
+  tax_breakdown: Record<string, string>
+  rounding_amount: string
+  grand_total: string
+}
+
+export interface ApplyDiscountPayload {
+  discount_type: DiscountType
+  discount_value: string
+}
+
+export interface FinalizeBillPayload {
+  notes?: string
+}
+
+export interface CancelBillPayload {
+  reason: string
+}
+
+export interface VoidBillPayload {
+  reason: string
+}
+
+export interface BillCorrectionRequest {
+  id: string
+  bill: string
+  bill_number: string
+  correction_type: CorrectionType
+  reason: string
+  requested_data: Record<string, unknown>
+  status: CorrectionStatus
+  requested_by: number
+  requested_by_email: string | null
+  requested_by_name: string | null
+  reviewed_by: number | null
+  reviewed_by_email: string | null
+  reviewed_by_name: string | null
+  reviewed_at: string | null
+  review_note: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateCorrectionPayload {
+  correction_type: CorrectionType
+  reason: string
+}
+
+export interface ReviewCorrectionPayload {
+  review_note?: string
+}
+
+export interface BillReceiptData {
+  bill_number: string
+  order_number: string
+  order_type: string
+  date: string
+  finalized_at: string | null
+  currency: string
+  restaurant: {
+    name: string
+    address: string
+    city: string
+    state: string
+    postal_code: string
+    phone: string
+    email: string
+    tax_id: string
+  }
+  branch: {
+    name: string
+    address: string
+    city: string
+    state: string
+    postal_code: string
+    phone: string
+  }
+  cashier: string | null
+  table_number: string | null
+  counter_code: string | null
+  receipt_header: string
+  receipt_footer: string
+  items: {
+    name: string
+    sku: string
+    quantity: string
+    unit_price: string
+    gross_amount: string
+    discount_amount: string
+    taxable_amount: string
+    tax_rate: string
+    tax_code: string
+    tax_amount: string
+    total_amount: string
+  }[]
+  subtotal: string
+  discount_amount: string
+  discount_type: DiscountType | null
+  discount_value: string
+  taxable_amount: string
+  tax_breakdown: Record<string, string>
+  tax_amount: string
+  rounding_amount: string
+  grand_total: string
+  status: BillStatus
+  correction_count: number
+}
+
+export interface BillListParams {
+  status?: BillStatus
+  order_type?: OrderType
+  branch?: string
+  bill_number?: string
+  order_number?: string
+  cashier?: string
+  date_from?: string
+  date_to?: string
+  page?: number
+}

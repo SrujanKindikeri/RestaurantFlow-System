@@ -50,6 +50,13 @@ import { POSOrderScreen } from '@/pages/orders/POSOrderScreen'
 import { KitchenDashboard } from '@/pages/kitchen/KitchenDashboard'
 import { KitchenHistory } from '@/pages/kitchen/KitchenHistory'
 
+// Phase 8 — Billing
+import { BillingDashboard } from '@/pages/billing/BillingDashboard'
+import { BillListPage } from '@/pages/billing/BillListPage'
+import { BillDetailPage } from '@/pages/billing/BillDetailPage'
+import { BillReceiptPage } from '@/pages/billing/BillReceiptPage'
+import { BillCorrectionsPage } from '@/pages/billing/BillCorrectionsPage'
+
 function App() {
   return (
     <Routes>
@@ -118,6 +125,13 @@ function App() {
           {/* Phase 7 — Kitchen Display System */}
           <Route path="/kitchen" element={<KitchenDashboard />} />
           <Route path="/kitchen/history" element={<KitchenHistory />} />
+
+          {/* Phase 8 — Billing */}
+          <Route path="/billing" element={<BillingDashboard />} />
+          <Route path="/billing/bills" element={<BillListPage />} />
+          <Route path="/billing/bills/:id" element={<BillDetailPage />} />
+          <Route path="/billing/bills/:id/receipt" element={<BillReceiptPage />} />
+          <Route path="/billing/corrections" element={<BillCorrectionsPage />} />
         </Route>
       </Route>
 

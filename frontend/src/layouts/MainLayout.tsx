@@ -87,6 +87,21 @@ const ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
+  billing: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+    </svg>
+  ),
+  bills: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  ),
+  corrections: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  ),
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -114,12 +129,17 @@ const NAV_ITEMS: NavItem[] = [
   // Phase 7 — Kitchen
   { label: 'Kitchen Display', to: '/kitchen', permission: 'kitchen.view', icon: ICONS.kitchen },
   { label: 'Kitchen History', to: '/kitchen/history', permission: 'kitchen.view_history', icon: ICONS.kitchenHistory },
+  // Phase 8 — Billing
+  { label: 'Billing', to: '/billing', permission: 'bill.view', icon: ICONS.billing },
+  { label: 'Bills', to: '/billing/bills', permission: 'bill.view', icon: ICONS.bills },
+  { label: 'Corrections', to: '/billing/corrections', permission: 'bill.correction.request', icon: ICONS.corrections },
 ]
 
 const COUNTER_PERMS = new Set(['counter.view', 'counter.session.view'])
 const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
 const ORDER_PERMS = new Set(['table.view', 'order.view.branch', 'order.create.dine_in', 'order.create.counter', 'order.create.takeaway'])
 const KITCHEN_PERMS = new Set(['kitchen.view', 'kitchen.view_history'])
+const BILLING_PERMS = new Set(['bill.view', 'bill.correction.request'])
 
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -170,7 +190,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 7</p>
+            <p className="text-[10px] text-gray-600 font-mono">Phase 8</p>
           </div>
         </div>
 
@@ -180,7 +200,7 @@ export function MainLayout() {
             Management
           </p>
           <ul className="space-y-0.5" role="list">
-            {visibleItems.filter(i => !COUNTER_PERMS.has(i.permission ?? '') && !MENU_PERMS.has(i.permission ?? '') && !KITCHEN_PERMS.has(i.permission ?? '')).map((item) => (
+            {visibleItems.filter(i => !COUNTER_PERMS.has(i.permission ?? '') && !MENU_PERMS.has(i.permission ?? '') && !KITCHEN_PERMS.has(i.permission ?? '') && !BILLING_PERMS.has(i.permission ?? '')).map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
@@ -325,6 +345,37 @@ export function MainLayout() {
               </ul>
             </>
           )}
+
+          {/* Phase 8 — Billing section */}
+          {visibleItems.some(i => BILLING_PERMS.has(i.permission ?? '')) && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Billing
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {visibleItems.filter(i => BILLING_PERMS.has(i.permission ?? '')).map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.to === '/billing'}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          isActive
+                            ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                            : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                        )
+                      }
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </nav>
 
         {/* User info + logout */}
@@ -376,7 +427,7 @@ export function MainLayout() {
             <div className="hidden sm:flex items-center gap-2">
               <span className="text-xs text-gray-600">{user.email}</span>
               <span className="text-gray-700">·</span>
-              <span className="text-xs text-gray-600 font-mono">Phase 6</span>
+              <span className="text-xs text-gray-600">Phase 8</span>
             </div>
           )}
         </header>
