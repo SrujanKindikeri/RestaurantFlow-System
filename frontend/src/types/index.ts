@@ -562,7 +562,7 @@ export interface CounterDashboardResponse {
     maintenance: number
   }
 }
-
+ 
 // -----------------------------------------------------------------------------
 // Phase 5 — Menu
 // -----------------------------------------------------------------------------
@@ -795,4 +795,193 @@ export interface MenuDashboardStats {
     restaurant_name: string
     available_items: number
   }[]
+}
+
+// -----------------------------------------------------------------------------
+// Phase 6 — Dining Tables
+// -----------------------------------------------------------------------------
+
+export type TableStatus = 'ACTIVE' | 'INACTIVE'
+export type TableSessionStatus = 'OPEN' | 'CLOSED'
+export type OrderType = 'DINE_IN' | 'TAKEAWAY' | 'COUNTER'
+export type OrderStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED'
+
+export interface ActiveOrderSummary {
+  id: string
+  order_number: string
+  status: OrderStatus
+  assigned_waiter: string | null
+}
+
+export interface DiningTable {
+  id: string
+  branch: string
+  branch_name: string
+  restaurant_id: string
+  restaurant_name: string
+  organization_id: string
+  table_number: string
+  name: string
+  capacity: number
+  section: string
+  status: TableStatus
+  display_order: number
+  is_occupied: boolean
+  active_session_id: string | null
+  active_order: ActiveOrderSummary | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DiningTableCreatePayload {
+  branch: string
+  table_number: string
+  name?: string
+  capacity: number
+  section?: string
+  display_order?: number
+}
+
+export type DiningTableUpdatePayload = Partial<DiningTableCreatePayload> & {
+  status?: TableStatus
+}
+
+// -----------------------------------------------------------------------------
+// Phase 6 — Table Sessions
+// -----------------------------------------------------------------------------
+
+export interface TableSession {
+  id: string
+  table: string
+  table_number: string
+  table_name: string
+  branch_id: string
+  branch_name: string
+  restaurant_name: string
+  opened_by: number
+  opened_by_email: string
+  opened_by_name: string
+  closed_by: number | null
+  closed_by_email: string | null
+  opened_at: string
+  closed_at: string | null
+  status: TableSessionStatus
+  guest_count: number
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
+export interface OpenTableSessionPayload {
+  guest_count: number
+  notes?: string
+}
+
+// -----------------------------------------------------------------------------
+// Phase 6 — Orders
+// -----------------------------------------------------------------------------
+
+export interface OrderItem {
+  id: string
+  order: string
+  menu_item: string
+  item_name_snapshot: string
+  sku_snapshot: string
+  unit_price_snapshot: string
+  tax_rate_snapshot: string
+  tax_code_snapshot: string
+  quantity: string
+  notes: string
+  line_total: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Order {
+  id: string
+  branch: string
+  branch_name: string
+  restaurant_id: string
+  restaurant_name: string
+  organization_id: string
+  order_number: string
+  order_type: OrderType
+  table: string | null
+  table_number: string | null
+  table_section: string | null
+  table_session: string | null
+  counter: string | null
+  counter_code: string | null
+  counter_name: string | null
+  counter_session: string | null
+  created_by: number
+  created_by_email: string
+  created_by_name: string
+  assigned_waiter: number | null
+  assigned_waiter_email: string | null
+  assigned_waiter_name: string | null
+  guest_count: number | null
+  status: OrderStatus
+  notes: string
+  item_count: number
+  preview_total: string
+  confirmed_at: string | null
+  cancelled_at: string | null
+  cancellation_reason: string
+  created_at: string
+  updated_at: string
+}
+
+export interface OrderDetail extends Order {
+  items: OrderItem[]
+}
+
+export interface CreateOrderPayload {
+  branch: string
+  order_type: OrderType
+  table?: string | null
+  table_session?: string | null
+  counter?: string | null
+  counter_session?: string | null
+  guest_count?: number | null
+  assigned_waiter?: number | null
+  notes?: string
+}
+
+export interface AddOrderItemPayload {
+  menu_item: string
+  quantity: string
+  notes?: string
+}
+
+export interface UpdateOrderItemPayload {
+  quantity?: string
+  notes?: string
+}
+
+export interface CancelOrderPayload {
+  reason?: string
+}
+
+export interface AssignWaiterPayload {
+  waiter: number
+}
+
+// POS draft order state (local, not server)
+export interface DraftOrderItem {
+  menu_item_id: string
+  name: string
+  sku: string
+  price: string
+  tax_rate: string | null
+  tax_code: string | null
+  quantity: number
+  notes: string
+}
+
+// Combined for the POS screen
+export interface POSCart {
+  order_id: string | null         // null = not yet created on backend
+  order_number: string | null
+  items: DraftOrderItem[]
 }

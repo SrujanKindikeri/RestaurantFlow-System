@@ -1,6 +1,6 @@
 // =============================================================================
 // RestaurantFlow — Application Routes
-// Phase 5: Menu + Categories + Pricing + Availability + Tax
+// Phase 6: Tables + Orders + POS
 // =============================================================================
 
 import { Routes, Route, Navigate } from 'react-router-dom'
@@ -40,6 +40,12 @@ import { Pricing } from '@/pages/menu/Pricing'
 import { Availability } from '@/pages/menu/Availability'
 import { TaxRates } from '@/pages/menu/TaxRates'
 
+// Phase 6 — Tables + Orders + POS
+import { TablesDashboard } from '@/pages/tables/TablesDashboard'
+import { OrderListPage } from '@/pages/orders/OrderListPage'
+import { OrderDetailPage } from '@/pages/orders/OrderDetailPage'
+import { POSOrderScreen } from '@/pages/orders/POSOrderScreen'
+
 function App() {
   return (
     <Routes>
@@ -48,6 +54,13 @@ function App() {
       {/* ------------------------------------------------------------------ */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+
+      {/* ------------------------------------------------------------------ */}
+      {/* POS route — full-screen, bypasses MainLayout sidebar                */}
+      {/* ------------------------------------------------------------------ */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/pos" element={<POSOrderScreen />} />
+      </Route>
 
       {/* ------------------------------------------------------------------ */}
       {/* Protected routes (auth required)                                    */}
@@ -89,6 +102,14 @@ function App() {
           <Route path="/menu/pricing" element={<Pricing />} />
           <Route path="/menu/availability" element={<Availability />} />
           <Route path="/menu/tax-rates" element={<TaxRates />} />
+
+          {/* Phase 6 — Tables */}
+          <Route path="/tables" element={<TablesDashboard />} />
+
+          {/* Phase 6 — Orders */}
+          <Route path="/orders" element={<OrderListPage />} />
+          <Route path="/orders/:id" element={<OrderDetailPage />} />
+          <Route path="/orders/new" element={<POSOrderScreen />} />
         </Route>
       </Route>
 
