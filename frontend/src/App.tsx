@@ -57,6 +57,9 @@ import { BillDetailPage } from '@/pages/billing/BillDetailPage'
 import { BillReceiptPage } from '@/pages/billing/BillReceiptPage'
 import { BillCorrectionsPage } from '@/pages/billing/BillCorrectionsPage'
 
+// Phase 9 — Payments
+import { PaymentHistoryPage } from '@/pages/payments/PaymentHistoryPage'
+
 function App() {
   return (
     <Routes>
@@ -132,6 +135,9 @@ function App() {
           <Route path="/billing/bills/:id" element={<BillDetailPage />} />
           <Route path="/billing/bills/:id/receipt" element={<BillReceiptPage />} />
           <Route path="/billing/corrections" element={<BillCorrectionsPage />} />
+
+          {/* Phase 9 — Payments */}
+          <Route path="/payments" element={<PaymentHistoryPage />} />
         </Route>
       </Route>
 

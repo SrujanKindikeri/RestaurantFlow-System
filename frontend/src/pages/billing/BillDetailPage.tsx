@@ -12,6 +12,8 @@ import {
 import { BillStatusBadge } from '@/components/billing/BillStatusBadge'
 import { BillTotalsPanel } from '@/components/billing/BillTotalsPanel'
 import { BillItemsTable } from '@/components/billing/BillItemsTable'
+import { PaymentModal } from '@/components/payments/PaymentModal'
+import { PaymentSummaryPanel } from '@/components/payments/PaymentSummaryPanel'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Bill, DiscountType, CorrectionType } from '@/types'
 
@@ -41,6 +43,9 @@ export function BillDetailPage() {
   const [showVoidForm, setShowVoidForm]     = useState(false)
   const [voidReason, setVoidReason]         = useState('')
 
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentRefreshKey, setPaymentRefreshKey] = useState(0)
+
   const perms = user?.scope?.permissions ?? []
   const canFinalize   = perms.includes('bill.finalize')
   const canCancel     = perms.includes('bill.cancel')
@@ -48,6 +53,7 @@ export function BillDetailPage() {
   const canDiscount   = perms.includes('discount.apply')
   const canPrint      = perms.includes('bill.print')
   const canCorrect    = perms.includes('bill.correction.request')
+  const canPay        = perms.includes('payment.create')
 
   function load() {
     if (!id) return
@@ -152,6 +158,7 @@ export function BillDetailPage() {
   const isDraft     = bill.status === 'DRAFT'
   const isFinalized = bill.status === 'FINALIZED'
   const hasDiscount = parseFloat(bill.discount_amount) > 0
+  const counterSessionId = bill.counter_session ?? null
 
   return (
     <div className="space-y-6">
@@ -187,6 +194,17 @@ export function BillDetailPage() {
               className="px-3 py-1.5 text-sm rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors"
             >
               Print Receipt
+            </button>
+          )}
+          {isFinalized && canPay && (
+            <button
+              onClick={() => setShowPaymentModal(!showPaymentModal)}
+              className="px-3 py-1.5 text-sm rounded-lg bg-green-700 text-white hover:bg-green-600 transition-colors flex items-center gap-1.5"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              {showPaymentModal ? 'Hide Payment' : 'Collect Payment'}
             </button>
           )}
           {isDraft && canDiscount && (
@@ -394,9 +412,28 @@ export function BillDetailPage() {
           )}
         </div>
 
-        {/* Right — Totals */}
+        {/* Right — Totals + Payment */}
         <div className="space-y-4">
           <BillTotalsPanel totals={bill} />
+
+          {/* Payment modal (inline, shown when canPay + finalized) */}
+          {showPaymentModal && isFinalized && (
+            <PaymentModal
+              billId={bill.id}
+              counterSessionId={counterSessionId}
+              onClose={() => setShowPaymentModal(false)}
+              onPaid={() => {
+                setShowPaymentModal(false)
+                setPaymentRefreshKey((k) => k + 1)
+              }}
+            />
+          )}
+
+          {/* Payment summary — always show for finalized bills */}
+          {isFinalized && !showPaymentModal && (
+            <PaymentSummaryPanel billId={bill.id} refreshKey={paymentRefreshKey} />
+          )}
+
           {bill.notes && (
             <div className="rounded-lg border border-gray-800 bg-gray-900/60 px-4 py-3">
               <p className="text-xs text-gray-500 mb-1">Notes</p>

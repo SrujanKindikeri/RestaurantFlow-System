@@ -74,11 +74,15 @@ PERMISSIONS = [
     {"code": "bill.cancel",       "name": "Cancel Bill",          "module": "bill", "action": "cancel"},
     {"code": "bill.edit.request", "name": "Request Bill Edit",    "module": "bill", "action": "edit.request"},
     {"code": "bill.edit.approve", "name": "Approve Bill Edit",    "module": "bill", "action": "edit.approve"},
-    # Payments (future)
-    {"code": "payment.view",           "name": "View Payments",        "module": "payment", "action": "view"},
-    {"code": "payment.create",         "name": "Create Payment",       "module": "payment", "action": "create"},
-    {"code": "payment.refund.request", "name": "Request Refund",       "module": "payment", "action": "refund.request"},
-    {"code": "payment.refund.approve", "name": "Approve Refund",       "module": "payment", "action": "refund.approve"},
+    # Payments (Phase 9)
+    {"code": "payment.view",            "name": "View Payments",         "module": "payment", "action": "view"},
+    {"code": "payment.create",          "name": "Create Payment",        "module": "payment", "action": "create"},
+    {"code": "payment.cancel",          "name": "Cancel Payment",        "module": "payment", "action": "cancel"},
+    {"code": "payment.refund.request",  "name": "Request Refund",        "module": "payment", "action": "refund.request"},
+    {"code": "payment.refund.approve",  "name": "Approve Refund",        "module": "payment", "action": "refund.approve"},
+    {"code": "payment.refund.process",  "name": "Process Refund",        "module": "payment", "action": "refund.process"},
+    {"code": "payment.history.view",    "name": "View Payment History",  "module": "payment", "action": "history.view"},
+    {"code": "payment.receipt.print",   "name": "Print Payment Receipt", "module": "payment", "action": "receipt.print"},
     # Inventory (future)
     {"code": "inventory.view",    "name": "View Inventory",   "module": "inventory", "action": "view"},
     {"code": "inventory.adjust",  "name": "Adjust Inventory", "module": "inventory", "action": "adjust"},
@@ -182,8 +186,9 @@ ROLES = [
             "order.view", "order.create", "order.update", "order.cancel",
             "bill.view", "bill.create", "bill.print", "bill.cancel",
             "bill.edit.request", "bill.edit.approve",
-            "payment.view", "payment.create",
-            "payment.refund.request", "payment.refund.approve",
+            "payment.view", "payment.create", "payment.cancel",
+            "payment.refund.request", "payment.refund.approve", "payment.refund.process",
+            "payment.history.view", "payment.receipt.print",
             "inventory.view", "inventory.adjust", "inventory.wastage", "inventory.receive",
             "expense.view", "expense.create", "expense.approve",
             "report.sales.view", "report.accounts.view", "report.profit.view",
@@ -210,7 +215,9 @@ ROLES = [
             "order.view", "order.create", "order.update", "order.cancel",
             "bill.view", "bill.create", "bill.print",
             "bill.edit.request", "bill.edit.approve",
-            "payment.view", "payment.create", "payment.refund.request",
+            "payment.view", "payment.create", "payment.cancel",
+            "payment.refund.request", "payment.refund.approve", "payment.refund.process",
+            "payment.history.view", "payment.receipt.print",
             "inventory.view", "inventory.adjust", "inventory.wastage",
             "expense.view", "expense.create",
             "report.sales.view",
@@ -232,7 +239,8 @@ ROLES = [
         "permissions": [
             "order.view", "order.create",
             "bill.view", "bill.create", "bill.print",
-            "payment.view", "payment.create",
+            "payment.view", "payment.create", "payment.cancel",
+            "payment.receipt.print",
             # Phase 4 — Counters (cashier subset)
             "counter.view",
             "counter.session.view", "counter.session.open", "counter.session.close",
@@ -277,7 +285,7 @@ ROLES = [
         "permissions": [
             "expense.view", "expense.create",
             "report.accounts.view", "report.profit.view",
-            "payment.view",
+            "payment.view", "payment.history.view", "payment.receipt.print",
         ],
     },
 ]

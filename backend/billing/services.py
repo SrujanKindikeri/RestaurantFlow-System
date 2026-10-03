@@ -1269,7 +1269,29 @@ def get_bill_receipt_data(bill) -> dict:
         "grand_total":      str(bill.grand_total),
         "status":           bill.status,
         "correction_count": correction_count,
+        # Payment fields (Phase 9) — populated if payments exist
+        **_get_receipt_payment_data(bill),
     }
+
+
+def _get_receipt_payment_data(bill) -> dict:
+    """
+    Fetch payment information to append to the receipt.
+    Imported lazily to avoid circular imports between billing and payments.
+    Returns an empty payment structure if the payments app is not available
+    or if no payments exist yet.
+    """
+    try:
+        from payments.services import get_payment_receipt_data
+        return get_payment_receipt_data(bill)
+    except Exception:
+        return {
+            "payment_status": "UNPAID",
+            "total_paid":     "0.00",
+            "total_refunded": "0.00",
+            "remaining":      str(bill.grand_total),
+            "payments":       [],
+        }
 
 
 # =============================================================================

@@ -1308,3 +1308,210 @@ export interface BillListParams {
   date_to?: string
   page?: number
 }
+
+// =============================================================================
+// Phase 9 — Payments
+// =============================================================================
+
+export type PaymentStatus =
+  | 'PENDING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'REFUNDED'
+  | 'PARTIALLY_REFUNDED'
+
+export type PaymentMethod =
+  | 'CASH'
+  | 'UPI'
+  | 'CARD'
+  | 'WALLET'
+  | 'NET_BANKING'
+  | 'BANK_TRANSFER'
+  | 'CHEQUE'
+  | 'CREDIT'
+  | 'OTHER'
+
+export type BillPaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'OVERPAID'
+
+export type RefundStatus =
+  | 'REQUESTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'PROCESSED'
+  | 'CANCELLED'
+
+// ---------------------------------------------------------------------------
+// Payment
+// ---------------------------------------------------------------------------
+
+export interface PaymentRefundItem {
+  id: string
+  refund_number: string
+  payment: string
+  amount: string
+  status: RefundStatus
+  reason: string
+  rejection_reason: string
+  notes: string
+  transaction_reference: string
+  requested_by: number | null
+  requested_by_email: string | null
+  requested_by_name: string | null
+  approved_by: number | null
+  approved_by_email: string | null
+  approved_by_name: string | null
+  processed_by: number | null
+  processed_by_name: string | null
+  requested_at: string
+  approved_at: string | null
+  processed_at: string | null
+  rejected_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Payment {
+  id: string
+  payment_number: string
+  bill: string
+  bill_number: string | null
+  branch: string
+  branch_name: string | null
+  counter: string | null
+  counter_code: string | null
+  counter_session: string | null
+  counter_session_id: string | null
+  amount: string
+  payment_method: PaymentMethod
+  status: PaymentStatus
+  transaction_reference: string
+  provider_reference: string
+  cash_received: string | null
+  change_amount: string | null
+  notes: string
+  idempotency_key: string
+  initiated_by: number | null
+  initiated_by_email: string | null
+  initiated_by_name: string | null
+  completed_by: number | null
+  completed_by_name: string | null
+  completed_at: string | null
+  failed_at: string | null
+  cancelled_at: string | null
+  cancellation_reason: string
+  refunds: PaymentRefundItem[]
+  created_at: string
+  updated_at: string
+}
+
+export type PaymentSummary = Omit<Payment, 'refunds' | 'provider_reference' | 'counter_session_id' | 'notes'>
+
+// ---------------------------------------------------------------------------
+// Bill Payment Summary
+// ---------------------------------------------------------------------------
+
+export interface BillPaymentSummary {
+  bill_id: string
+  bill_number: string
+  bill_total: string
+  total_paid: string
+  total_refunded: string
+  remaining: string
+  payment_status: BillPaymentStatus
+  payments: Payment[]
+}
+
+// ---------------------------------------------------------------------------
+// Create/Action payloads
+// ---------------------------------------------------------------------------
+
+export interface CreatePaymentPayload {
+  bill_id: string
+  amount: string
+  payment_method: PaymentMethod
+  cash_received?: string | null
+  transaction_reference?: string
+  provider_reference?: string
+  notes?: string
+  idempotency_key?: string
+  counter_session?: string | null
+}
+
+export interface CancelPaymentPayload {
+  reason: string
+}
+
+export interface CreateRefundPayload {
+  amount: string
+  reason: string
+  notes?: string
+}
+
+export interface RejectRefundPayload {
+  reason: string
+}
+
+export interface ProcessRefundPayload {
+  transaction_reference?: string
+  notes?: string
+}
+
+// ---------------------------------------------------------------------------
+// Payment list filters
+// ---------------------------------------------------------------------------
+
+export interface PaymentListParams {
+  bill?: string
+  branch?: string
+  status?: PaymentStatus
+  payment_method?: PaymentMethod
+  date_from?: string
+  date_to?: string
+  counter?: string
+  counter_session?: string
+  page?: number
+}
+
+// ---------------------------------------------------------------------------
+// Receipt — Phase 9 additions to BillReceiptData
+// ---------------------------------------------------------------------------
+
+export interface ReceiptPaymentLine {
+  payment_number: string
+  payment_method: PaymentMethod
+  amount: string
+  cash_received: string | null
+  change_amount: string | null
+  transaction_reference: string
+  completed_at: string | null
+}
+
+// Extends the existing BillReceiptData with payment fields
+export interface BillReceiptDataV9 extends BillReceiptData {
+  payment_status: BillPaymentStatus
+  total_paid: string
+  total_refunded: string
+  remaining: string
+  payments: ReceiptPaymentLine[]
+}
+
+// ---------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------
+
+export interface PaymentAuditLog {
+  id: string
+  payment: string
+  refund: string | null
+  actor: number | null
+  actor_email: string | null
+  actor_name: string | null
+  action: string
+  old_status: string
+  new_status: string
+  amount: string | null
+  reason: string
+  metadata: Record<string, unknown>
+  created_at: string
+}

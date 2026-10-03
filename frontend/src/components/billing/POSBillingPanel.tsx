@@ -1,20 +1,6 @@
 // =============================================================================
 // RestaurantFlow — POS Billing Panel
-// Phase 8
-//
-// Embedded panel shown on the Order Detail page when the cashier clicks
-// "Create Bill" from a confirmed order.
-//
-// POS billing flow:
-//   1. Cashier opens a confirmed order
-//   2. Clicks "Create Bill" → this panel opens
-//   3. Reviews items + subtotal
-//   4. (Optional) applies a permitted discount
-//   5. Reviews tax and grand total
-//   6. Clicks "Finalize Bill"
-//   7. Can then Print Receipt
-//
-// NOTE: Payment is NOT implemented here (Phase 9).
+// Phase 9 — Payment integration added
 // =============================================================================
 
 import { useState, useEffect } from 'react'
@@ -29,6 +15,8 @@ import {
 import { BillStatusBadge } from './BillStatusBadge'
 import { BillTotalsPanel } from './BillTotalsPanel'
 import { BillItemsTable } from './BillItemsTable'
+import { PaymentModal } from '@/components/payments/PaymentModal'
+import { PaymentSummaryPanel } from '@/components/payments/PaymentSummaryPanel'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Bill, BillCalculation, DiscountType, OrderDetail } from '@/types'
 
@@ -46,16 +34,18 @@ export function POSBillingPanel({ order, onClose }: Props) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy]       = useState(false)
   const [error, setError]     = useState<string | null>(null)
-  const [step, setStep]       = useState<'review' | 'discount' | 'finalized'>('review')
+  const [step, setStep] = useState<'review' | 'discount' | 'finalized' | 'payment' | 'paid'>('review')
+  const [paymentRefreshKey, setPaymentRefreshKey] = useState(0)
 
   // Discount form
   const [discountType, setDiscountType]   = useState<DiscountType>('PERCENTAGE')
   const [discountValue, setDiscountValue] = useState('')
 
   const perms = user?.scope?.permissions ?? []
-  const canFinalize = perms.includes('bill.finalize')
-  const canDiscount = perms.includes('discount.apply')
-  const canPrint    = perms.includes('bill.print')
+  const canFinalize  = perms.includes('bill.finalize')
+  const canDiscount  = perms.includes('discount.apply')
+  const canPrint     = perms.includes('bill.print')
+  const canPay       = perms.includes('payment.create')
 
   // Step 1 — create (or retrieve) the bill on mount
   useEffect(() => {
@@ -108,8 +98,7 @@ export function POSBillingPanel({ order, onClose }: Props) {
       const finalized = await finalizeBill(bill.id)
       setBill(finalized)
       setStep('finalized')
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+    } catch (e: unknown) {      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
       setError(msg ?? 'Finalization failed.')
     } finally { setBusy(false) }
   }
@@ -121,6 +110,9 @@ export function POSBillingPanel({ order, onClose }: Props) {
   function handleViewBill() {
     if (bill) navigate(`/billing/bills/${bill.id}`)
   }
+
+  // Counter session from order (if COUNTER type)
+  const counterSessionId = order.counter_session ?? null
 
   if (loading) {
     return (
@@ -248,10 +240,21 @@ export function POSBillingPanel({ order, onClose }: Props) {
 
           {step === 'finalized' && (
             <>
+              {canPay && (
+                <button
+                  onClick={() => setStep('payment')}
+                  className="flex-1 py-2.5 rounded-xl bg-green-700 text-white font-semibold text-sm hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Collect Payment
+                </button>
+              )}
               {canPrint && (
                 <button
                   onClick={handlePrint}
-                  className="flex-1 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-500 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-xl border border-brand-700/60 text-brand-400 font-semibold text-sm hover:bg-brand-900/20 transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -261,11 +264,20 @@ export function POSBillingPanel({ order, onClose }: Props) {
               )}
               <button
                 onClick={handleViewBill}
-                className="flex-1 py-2.5 rounded-xl border border-gray-700 text-gray-300 text-sm hover:bg-gray-800 transition-colors"
+                className="px-4 py-2.5 rounded-xl border border-gray-700 text-gray-300 text-sm hover:bg-gray-800 transition-colors"
               >
                 View Bill
               </button>
             </>
+          )}
+
+          {step === 'payment' && bill && (
+            <button
+              onClick={() => setStep('finalized')}
+              className="px-4 py-2.5 rounded-xl border border-gray-700 text-gray-400 text-sm hover:bg-gray-800"
+            >
+              ← Back to Bill
+            </button>
           )}
 
           {step !== 'finalized' && (
@@ -278,13 +290,22 @@ export function POSBillingPanel({ order, onClose }: Props) {
           )}
         </div>
 
-        {/* Phase 9 notice */}
-        {step === 'finalized' && (
-          <div className="rounded-lg border border-gray-800 bg-gray-900/40 px-4 py-3 text-center">
-            <p className="text-xs text-gray-600">
-              Payment processing will be available in Phase 9
-            </p>
-          </div>
+        {/* Payment modal (inline panel — replaces "Phase 9 notice") */}
+        {step === 'payment' && bill && (
+          <PaymentModal
+            billId={bill.id}
+            counterSessionId={counterSessionId}
+            onClose={() => setStep('finalized')}
+            onPaid={() => {
+              setStep('paid')
+              setPaymentRefreshKey((k) => k + 1)
+            }}
+          />
+        )}
+
+        {/* Payment summary after completion */}
+        {(step === 'finalized' || step === 'paid') && bill && (
+          <PaymentSummaryPanel billId={bill.id} refreshKey={paymentRefreshKey} />
         )}
       </div>
     </div>

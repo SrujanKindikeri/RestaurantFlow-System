@@ -1,15 +1,12 @@
 // =============================================================================
 // RestaurantFlow — Bill Receipt / Print Page
-// Phase 8
-//
-// Renders a clean, print-optimised receipt.
-// Payment details intentionally absent — Phase 9 will add them.
+// Phase 9 — Updated with payment information
 // =============================================================================
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getBillReceipt } from '@/services/billing'
-import type { BillReceiptData } from '@/types'
+import { getBillReceiptWithPayments } from '@/services/payments'
+import type { BillReceiptDataV9 } from '@/types'
 
 function fmt(v: string, currency = '₹') {
   const n = parseFloat(v)
@@ -22,13 +19,13 @@ export function BillReceiptPage() {
   const navigate = useNavigate()
   const printRef = useRef<HTMLDivElement>(null)
 
-  const [receipt, setReceipt] = useState<BillReceiptData | null>(null)
+  const [receipt, setReceipt] = useState<BillReceiptDataV9 | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
-    getBillReceipt(id)
+    getBillReceiptWithPayments(id)
       .then(setReceipt)
       .catch(() => setError('Receipt not found.'))
       .finally(() => setLoading(false))
@@ -49,6 +46,18 @@ export function BillReceiptPage() {
   const currency = receipt.currency === 'INR' ? '₹' : receipt.currency
   const hasDiscount = parseFloat(receipt.discount_amount) > 0
   const hasRounding = parseFloat(receipt.rounding_amount) !== 0
+  const hasPayments = (receipt.payments ?? []).length > 0
+  const paymentStatus = receipt.payment_status ?? 'UNPAID'
+
+  const METHOD_LABELS: Record<string, string> = {
+    CASH: 'Cash', UPI: 'UPI', CARD: 'Card', WALLET: 'Wallet',
+    NET_BANKING: 'Net Banking', BANK_TRANSFER: 'Bank Transfer',
+    CHEQUE: 'Cheque', CREDIT: 'Credit', OTHER: 'Other',
+  }
+
+  const PAYMENT_STATUS_LABELS: Record<string, string> = {
+    UNPAID: 'UNPAID', PARTIALLY_PAID: 'PARTIAL', PAID: 'PAID', OVERPAID: 'OVERPAID',
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 py-8">
@@ -202,9 +211,56 @@ export function BillReceiptPage() {
           </div>
         </div>
 
-        {/* Payment placeholder */}
-        <div className="px-6 py-3 border-b border-dashed border-gray-300 text-xs text-gray-400 italic text-center">
-          — Payment details will appear here after Phase 9 —
+        {/* Payment details — Phase 9 */}
+        <div className="px-6 py-3 border-b border-dashed border-gray-300 text-xs space-y-1">
+          {hasPayments ? (
+            <>
+              {(receipt.payments ?? []).map((p, i) => (
+                <div key={i}>
+                  <div className="flex justify-between font-medium">
+                    <span>{METHOD_LABELS[p.payment_method] ?? p.payment_method}</span>
+                    <span>{fmt(p.amount, currency)}</span>
+                  </div>
+                  {p.payment_method === 'CASH' && p.cash_received && (
+                    <div className="flex justify-between text-gray-500">
+                      <span className="pl-3">Cash received</span>
+                      <span>{fmt(p.cash_received, currency)}</span>
+                    </div>
+                  )}
+                  {p.payment_method === 'CASH' && p.change_amount && parseFloat(p.change_amount) > 0 && (
+                    <div className="flex justify-between text-gray-500">
+                      <span className="pl-3">Change</span>
+                      <span>{fmt(p.change_amount, currency)}</span>
+                    </div>
+                  )}
+                  {p.transaction_reference && (
+                    <div className="flex justify-between text-gray-400">
+                      <span className="pl-3">Ref</span>
+                      <span className="font-mono">{p.transaction_reference}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {(receipt.payments ?? []).length > 1 && (
+                <div className="flex justify-between font-medium border-t border-dashed border-gray-300 pt-1 mt-1">
+                  <span>Total Paid</span>
+                  <span>{fmt(receipt.total_paid ?? '0', currency)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold">
+                <span>Payment Status</span>
+                <span>{PAYMENT_STATUS_LABELS[paymentStatus] ?? paymentStatus}</span>
+              </div>
+              {parseFloat(receipt.remaining ?? '0') > 0 && (
+                <div className="flex justify-between text-red-600 font-medium">
+                  <span>Balance Due</span>
+                  <span>{fmt(receipt.remaining ?? '0', currency)}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-gray-400 italic text-center">Payment pending</div>
+          )}
         </div>
 
         {/* Footer */}
