@@ -1515,3 +1515,453 @@ export interface PaymentAuditLog {
   metadata: Record<string, unknown>
   created_at: string
 }
+
+// =============================================================================
+// Phase 10 — Inventory & Stock Management Types
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Enums / constants
+// ---------------------------------------------------------------------------
+
+export type UnitOfMeasurement =
+  | 'KG' | 'GRAM' | 'LITRE' | 'MILLILITRE'
+  | 'PIECE' | 'PACK' | 'BOX' | 'BOTTLE' | 'DOZEN'
+
+export type LocationType =
+  | 'MAIN_STORE' | 'KITCHEN' | 'COLD_STORAGE'
+  | 'FREEZER' | 'BAR' | 'DRY_STORE' | 'OTHER'
+
+export type MovementType =
+  | 'PURCHASE' | 'PURCHASE_RETURN' | 'TRANSFER_IN' | 'TRANSFER_OUT'
+  | 'WASTAGE' | 'ADJUSTMENT_IN' | 'ADJUSTMENT_OUT'
+  | 'CONSUMPTION' | 'OPENING_STOCK' | 'CORRECTION'
+
+export type PurchaseOrderStatus =
+  | 'DRAFT' | 'SUBMITTED' | 'APPROVED'
+  | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED'
+
+export type TransferStatus =
+  | 'DRAFT' | 'REQUESTED' | 'APPROVED' | 'COMPLETED' | 'CANCELLED'
+
+export type WastageType =
+  | 'SPOILED' | 'DAMAGED' | 'EXPIRED' | 'PREPARATION_LOSS' | 'OTHER'
+
+export type WastageStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'RECORDED'
+
+export type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK'
+
+// ---------------------------------------------------------------------------
+// Inventory Category
+// ---------------------------------------------------------------------------
+
+export interface InventoryCategory {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  name: string
+  description: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Inventory Item
+// ---------------------------------------------------------------------------
+
+export interface InventoryItem {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  category: string | null
+  category_name: string | null
+  name: string
+  sku: string
+  description: string
+  default_unit: UnitOfMeasurement
+  minimum_stock: string
+  reorder_level: string
+  maximum_stock: string
+  average_cost: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Storage Location
+// ---------------------------------------------------------------------------
+
+export interface StorageLocation {
+  id: string
+  branch: string
+  branch_name: string
+  restaurant_name: string
+  name: string
+  code: string
+  location_type: LocationType
+  description: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Stock Balance
+// ---------------------------------------------------------------------------
+
+export interface StockBalance {
+  id: string
+  inventory_item: string
+  item_name: string
+  item_sku: string
+  item_unit: UnitOfMeasurement
+  category_name: string | null
+  storage_location: string
+  location_name: string
+  location_code: string
+  branch_name: string
+  quantity: string
+  reserved_quantity: string
+  available_quantity: string
+  average_cost: string
+  reorder_level: string
+  stock_status: StockStatus
+  last_movement_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Stock Movement
+// ---------------------------------------------------------------------------
+
+export interface StockMovement {
+  id: string
+  inventory_item: string
+  item_name: string
+  item_sku: string
+  item_unit: UnitOfMeasurement
+  storage_location: string
+  location_name: string
+  branch_name: string
+  movement_type: MovementType
+  quantity: string
+  unit_cost: string
+  total_cost: string
+  reference_type: string
+  reference_id: string | null
+  reason: string
+  performed_by: number
+  performed_by_email: string
+  performed_by_name: string
+  created_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Supplier
+// ---------------------------------------------------------------------------
+
+export interface Supplier {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  name: string
+  code: string
+  contact_person: string
+  phone: string
+  email: string
+  address: string
+  tax_identifier: string
+  notes: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Purchase Order
+// ---------------------------------------------------------------------------
+
+export interface PurchaseOrderItem {
+  id: string
+  inventory_item: string
+  item_name: string
+  item_sku: string
+  quantity: string
+  unit: UnitOfMeasurement
+  unit_cost: string
+  tax_rate: string
+  discount_amount: string
+  total_amount: string
+  received_quantity: string
+  remaining_quantity: string
+  notes: string
+  created_at: string
+}
+
+export interface PurchaseOrder {
+  id: string
+  purchase_number: string
+  restaurant: string
+  restaurant_name: string
+  branch: string
+  branch_name: string
+  supplier: string
+  supplier_name: string
+  status: PurchaseOrderStatus
+  order_date: string | null
+  expected_date: string | null
+  subtotal: string
+  tax_amount: string
+  discount_amount: string
+  total_amount: string
+  notes: string
+  created_by: number
+  created_by_email: string
+  approved_by: number | null
+  approved_by_email: string | null
+  received_by: number | null
+  received_by_email: string | null
+  approved_at: string | null
+  received_at: string | null
+  items: PurchaseOrderItem[]
+  created_at: string
+  updated_at: string
+}
+
+export interface PurchaseOrderSummary extends Omit<PurchaseOrder, 'items'> {}
+
+// ---------------------------------------------------------------------------
+// Purchase Receipt
+// ---------------------------------------------------------------------------
+
+export interface PurchaseReceiptItem {
+  id: string
+  purchase_order_item: string
+  item_name: string
+  quantity_received: string
+  unit_cost: string
+}
+
+export interface PurchaseReceipt {
+  id: string
+  purchase_order: string
+  purchase_number: string
+  received_by: number
+  received_by_email: string
+  storage_location: string
+  location_name: string
+  received_at: string
+  notes: string
+  items: PurchaseReceiptItem[]
+}
+
+// ---------------------------------------------------------------------------
+// Stock Transfer
+// ---------------------------------------------------------------------------
+
+export interface StockTransferItem {
+  id: string
+  inventory_item: string
+  item_name: string
+  item_sku: string
+  quantity: string
+  unit: UnitOfMeasurement
+}
+
+export interface StockTransfer {
+  id: string
+  transfer_number: string
+  restaurant: string
+  restaurant_name: string
+  source_location: string
+  source_location_name: string
+  destination_location: string
+  destination_location_name: string
+  status: TransferStatus
+  notes: string
+  requested_by: number
+  requested_by_email: string
+  approved_by: number | null
+  approved_by_email: string | null
+  completed_by: number | null
+  completed_by_email: string | null
+  requested_at: string | null
+  approved_at: string | null
+  completed_at: string | null
+  items: StockTransferItem[]
+  created_at: string
+  updated_at: string
+}
+
+export interface StockTransferSummary extends Omit<StockTransfer, 'items'> {}
+
+// ---------------------------------------------------------------------------
+// Stock Wastage
+// ---------------------------------------------------------------------------
+
+export interface StockWastage {
+  id: string
+  inventory_item: string
+  item_name: string
+  item_sku: string
+  storage_location: string
+  location_name: string
+  branch_name: string
+  quantity: string
+  unit: UnitOfMeasurement
+  wastage_type: WastageType
+  reason: string
+  estimated_cost: string
+  status: WastageStatus
+  recorded_by: number
+  recorded_by_email: string
+  approved_by: number | null
+  approved_by_email: string | null
+  approved_at: string | null
+  rejection_reason: string
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Stock Adjustment
+// ---------------------------------------------------------------------------
+
+export interface StockAdjustment {
+  id: string
+  inventory_item: string
+  item_name: string
+  item_sku: string
+  storage_location: string
+  location_name: string
+  quantity_before: string
+  quantity_physical: string
+  quantity_difference: string
+  unit: UnitOfMeasurement
+  reason: string
+  adjusted_by: number
+  adjusted_by_email: string
+  stock_movement: string | null
+  created_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard
+// ---------------------------------------------------------------------------
+
+export interface InventoryDashboard {
+  total_items: number
+  low_stock: number
+  out_of_stock: number
+  pending_purchases: number
+  pending_transfers: number
+  pending_wastage: number
+}
+
+// ---------------------------------------------------------------------------
+// API payload types
+// ---------------------------------------------------------------------------
+
+export interface CreateInventoryCategoryPayload {
+  restaurant_id: string
+  name: string
+  description?: string
+}
+
+export interface CreateInventoryItemPayload {
+  restaurant_id: string
+  category_id?: string | null
+  name: string
+  sku: string
+  description?: string
+  default_unit: UnitOfMeasurement
+  minimum_stock?: string
+  reorder_level?: string
+  maximum_stock?: string
+}
+
+export interface CreateStorageLocationPayload {
+  branch_id: string
+  name: string
+  code: string
+  location_type: LocationType
+  description?: string
+}
+
+export interface CreateSupplierPayload {
+  restaurant_id: string
+  name: string
+  code: string
+  contact_person?: string
+  phone?: string
+  email?: string
+  address?: string
+  tax_identifier?: string
+  notes?: string
+}
+
+export interface CreatePurchaseOrderItemPayload {
+  inventory_item_id: string
+  quantity: string
+  unit: UnitOfMeasurement
+  unit_cost: string
+  tax_rate?: string
+  discount_amount?: string
+  notes?: string
+}
+
+export interface CreatePurchaseOrderPayload {
+  restaurant_id: string
+  branch_id: string
+  supplier_id: string
+  order_date?: string | null
+  expected_date?: string | null
+  discount_amount?: string
+  notes?: string
+  items: CreatePurchaseOrderItemPayload[]
+}
+
+export interface ReceiveItemPayload {
+  purchase_order_item_id: string
+  quantity_received: string
+}
+
+export interface ReceivePurchaseOrderPayload {
+  storage_location_id: string
+  notes?: string
+  items: ReceiveItemPayload[]
+}
+
+export interface CreateTransferItemPayload {
+  inventory_item_id: string
+  quantity: string
+  unit: UnitOfMeasurement
+}
+
+export interface CreateStockTransferPayload {
+  restaurant_id: string
+  source_location_id: string
+  destination_location_id: string
+  notes?: string
+  items: CreateTransferItemPayload[]
+}
+
+export interface CreateStockWastagePayload {
+  inventory_item_id: string
+  storage_location_id: string
+  quantity: string
+  unit: UnitOfMeasurement
+  wastage_type: WastageType
+  reason: string
+}
+
+export interface CreateStockAdjustmentPayload {
+  inventory_item_id: string
+  storage_location_id: string
+  quantity_physical: string
+  unit: UnitOfMeasurement
+  reason: string
+}

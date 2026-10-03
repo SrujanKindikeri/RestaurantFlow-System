@@ -102,6 +102,51 @@ const ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
     </svg>
   ),
+  inventory: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+    </svg>
+  ),
+  stock: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  ),
+  inventoryItems: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    </svg>
+  ),
+  purchases: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+  ),
+  transfers: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    </svg>
+  ),
+  wastage: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  ),
+  adjustments: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+    </svg>
+  ),
+  suppliers: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+  ),
+  stockHistory: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+    </svg>
+  ),
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -133,10 +178,27 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Billing', to: '/billing', permission: 'bill.view', icon: ICONS.billing },
   { label: 'Bills', to: '/billing/bills', permission: 'bill.view', icon: ICONS.bills },
   { label: 'Corrections', to: '/billing/corrections', permission: 'bill.correction.request', icon: ICONS.corrections },
+  // Phase 10 — Inventory
+  { label: 'Inventory', to: '/inventory', permission: 'inventory.view', icon: ICONS.inventory },
+  { label: 'Stock', to: '/inventory/stock', permission: 'inventory.view', icon: ICONS.stock },
+  { label: 'Items', to: '/inventory/items', permission: 'inventory.view', icon: ICONS.inventoryItems },
+  { label: 'Purchases', to: '/inventory/purchases', permission: 'purchase.view', icon: ICONS.purchases },
+  { label: 'Transfers', to: '/inventory/transfers', permission: 'inventory.transfer', icon: ICONS.transfers },
+  { label: 'Wastage', to: '/inventory/wastage', permission: 'inventory.wastage.create', icon: ICONS.wastage },
+  { label: 'Adjustments', to: '/inventory/adjustments', permission: 'inventory.adjust', icon: ICONS.adjustments },
+  { label: 'Suppliers', to: '/inventory/suppliers', permission: 'supplier.view', icon: ICONS.suppliers },
+  { label: 'Stock History', to: '/inventory/movements', permission: 'stock.movement.view', icon: ICONS.stockHistory },
 ]
 
 const COUNTER_PERMS = new Set(['counter.view', 'counter.session.view'])
-const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
+const INVENTORY_PERMS = new Set([
+  'inventory.view', 'inventory.create', 'inventory.update', 'inventory.adjust',
+  'inventory.transfer', 'inventory.transfer.approve',
+  'inventory.wastage.create', 'inventory.wastage.approve',
+  'supplier.view', 'supplier.create', 'supplier.update',
+  'purchase.view', 'purchase.create', 'purchase.submit', 'purchase.approve',
+  'purchase.receive', 'purchase.cancel', 'stock.movement.view',
+])const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
 const ORDER_PERMS = new Set(['table.view', 'order.view.branch', 'order.create.dine_in', 'order.create.counter', 'order.create.takeaway'])
 const KITCHEN_PERMS = new Set(['kitchen.view', 'kitchen.view_history'])
 const BILLING_PERMS = new Set(['bill.view', 'bill.correction.request'])
@@ -190,7 +252,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 8</p>
+            <p className="text-[10px] text-gray-600 font-mono">Phase 10</p>
           </div>
         </div>
 
@@ -376,6 +438,37 @@ export function MainLayout() {
               </ul>
             </>
           )}
+
+          {/* Phase 10 — Inventory section */}
+          {visibleItems.some(i => INVENTORY_PERMS.has(i.permission ?? '')) && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Inventory
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {visibleItems.filter(i => INVENTORY_PERMS.has(i.permission ?? '')).map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.to === '/inventory'}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          isActive
+                            ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                            : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                        )
+                      }
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </nav>
 
         {/* User info + logout */}
@@ -427,7 +520,7 @@ export function MainLayout() {
             <div className="hidden sm:flex items-center gap-2">
               <span className="text-xs text-gray-600">{user.email}</span>
               <span className="text-gray-700">·</span>
-              <span className="text-xs text-gray-600">Phase 8</span>
+              <span className="text-xs text-gray-600">Phase 10</span>
             </div>
           )}
         </header>

@@ -60,6 +60,17 @@ import { BillCorrectionsPage } from '@/pages/billing/BillCorrectionsPage'
 // Phase 9 — Payments
 import { PaymentHistoryPage } from '@/pages/payments/PaymentHistoryPage'
 
+// Phase 10 — Inventory & Stock Management
+import { InventoryDashboard } from '@/pages/inventory/InventoryDashboard'
+import { InventoryItemsPage } from '@/pages/inventory/InventoryItemsPage'
+import { StockOverviewPage } from '@/pages/inventory/StockOverviewPage'
+import { SuppliersPage } from '@/pages/inventory/SuppliersPage'
+import { PurchasesPage } from '@/pages/inventory/PurchasesPage'
+import { TransfersPage } from '@/pages/inventory/TransfersPage'
+import { WastagePage } from '@/pages/inventory/WastagePage'
+import { AdjustmentsPage } from '@/pages/inventory/AdjustmentsPage'
+import { StockHistoryPage } from '@/pages/inventory/StockHistoryPage'
+
 function App() {
   return (
     <Routes>
@@ -138,6 +149,17 @@ function App() {
 
           {/* Phase 9 — Payments */}
           <Route path="/payments" element={<PaymentHistoryPage />} />
+
+          {/* Phase 10 — Inventory & Stock Management */}
+          <Route path="/inventory" element={<InventoryDashboard />} />
+          <Route path="/inventory/items" element={<InventoryItemsPage />} />
+          <Route path="/inventory/stock" element={<StockOverviewPage />} />
+          <Route path="/inventory/suppliers" element={<SuppliersPage />} />
+          <Route path="/inventory/purchases" element={<PurchasesPage />} />
+          <Route path="/inventory/transfers" element={<TransfersPage />} />
+          <Route path="/inventory/wastage" element={<WastagePage />} />
+          <Route path="/inventory/adjustments" element={<AdjustmentsPage />} />
+          <Route path="/inventory/movements" element={<StockHistoryPage />} />
         </Route>
       </Route>
 
