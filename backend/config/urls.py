@@ -27,6 +27,8 @@ urlpatterns = [
     path("api/", include("accounting.urls")),
     path("api/", include("reporting.urls")),
     path("api/", include("central_control.urls")),
+    # Phase 16 — Notification & Communication Center
+    path("api/", include("notifications.urls")),
 ]
 
 # Serve media files in development

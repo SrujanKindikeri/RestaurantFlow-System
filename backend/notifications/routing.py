@@ -1,0 +1,11 @@
+# =============================================================================
+# RestaurantFlow — Notifications WebSocket URL Routing
+# Phase 16
+# =============================================================================
+
+from django.urls import path
+from notifications.consumers import NotificationsConsumer
+
+websocket_urlpatterns = [
+    path("ws/notifications/", NotificationsConsumer.as_asgi()),
+]

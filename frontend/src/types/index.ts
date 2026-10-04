@@ -2551,3 +2551,141 @@ export interface PayableDashboard {
   remaining_amount: string
   by_type: Array<{ type: PayableType; count: number; total: string }>
 }
+
+// =============================================================================
+// Phase 16 — Notifications
+// =============================================================================
+
+export type NotificationSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+export type NotificationChannel  = 'IN_APP' | 'WEBSOCKET' | 'EMAIL' | 'SMS' | 'WHATSAPP' | 'TELEGRAM'
+export type DeliveryStatus       = 'PENDING' | 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED' | 'CANCELLED' | 'NOT_CONFIGURED'
+export type RecipientStatus      = 'PENDING' | 'DELIVERED' | 'FAILED' | 'READ' | 'ACKNOWLEDGED'
+
+export interface NotificationData {
+  id: string
+  notification_type: string
+  severity: NotificationSeverity
+  title: string
+  message: string
+  source_type: string
+  source_id: string
+  action_url: string
+  metadata: Record<string, unknown>
+  created_at: string
+  expires_at: string | null
+}
+
+export interface NotificationRecipient {
+  id: string
+  notification: NotificationData
+  delivery_status: RecipientStatus
+  read_at: string | null
+  acknowledged_at: string | null
+  delivered_at: string | null
+  is_read: boolean
+  created_at: string
+}
+
+export interface UnreadCountResponse {
+  count: number
+}
+
+export interface NotificationListParams {
+  unread?: boolean
+  notification_type?: string
+  severity?: string
+  date_from?: string
+  date_to?: string
+  page?: number
+  page_size?: number
+}
+
+export interface NotificationListResponse {
+  count: number
+  page: number
+  results: NotificationRecipient[]
+}
+
+export interface NotificationPreference {
+  id: string
+  notification_type: string
+  channel: NotificationChannel
+  enabled: boolean
+  updated_at: string
+}
+
+export interface NotificationPreferenceBulkPayload {
+  notification_type: string
+  channel: NotificationChannel
+  enabled: boolean
+}
+
+export interface NotificationDelivery {
+  id: string
+  notification: string
+  recipient: string
+  channel: NotificationChannel
+  provider: string
+  status: DeliveryStatus
+  attempt_count: number
+  provider_message_id: string
+  queued_at: string
+  sent_at: string | null
+  failed_at: string | null
+  failure_reason: string
+  next_retry_at: string | null
+  user_email: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DeliveryListResponse {
+  count: number
+  page: number
+  results: NotificationDelivery[]
+}
+
+export interface NotificationTemplate {
+  id: string
+  company: string | null
+  notification_type: string
+  channel: NotificationChannel
+  subject_template: string
+  body_template: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface NotificationProviderConfig {
+  id: string
+  company: string
+  channel: NotificationChannel
+  provider: string
+  is_enabled: boolean
+  configuration_metadata: Record<string, string>
+  created_at: string
+  updated_at: string
+}
+
+export interface ProviderStatus {
+  channel: NotificationChannel
+  provider: string
+  configured: boolean
+  status: string
+}
+
+// WebSocket event payloads
+export interface NotificationWsEvent {
+  type: 'notification.created' | 'notification.updated' | 'notification.read'
+  notification_id?: string
+  notification_type?: string
+  severity?: NotificationSeverity
+  title?: string
+  created_at?: string
+}
+
+export interface NotificationUnreadCountWsEvent {
+  type: 'notification.unread_count'
+  count: number
+}

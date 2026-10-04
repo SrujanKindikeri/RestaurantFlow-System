@@ -16,9 +16,10 @@ django_asgi_app = get_asgi_application()
 # Import WebSocket URL patterns after Django is fully initialized
 from kitchen.routing import websocket_urlpatterns as kitchen_ws  # noqa: E402
 from central_control.routing import websocket_urlpatterns as cc_ws  # noqa: E402
+from notifications.routing import websocket_urlpatterns as notif_ws  # noqa: E402
 
 # Merge all WebSocket URL patterns
-all_websocket_urlpatterns = kitchen_ws + cc_ws
+all_websocket_urlpatterns = kitchen_ws + cc_ws + notif_ws
 
 application = ProtocolTypeRouter(
     {

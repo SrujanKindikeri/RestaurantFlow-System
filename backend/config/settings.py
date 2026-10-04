@@ -44,6 +44,9 @@ THIRD_PARTY_APPS = [
     "corsheaders",
     "channels",
     "django_filters",
+    # Phase 16 — Celery beat for periodic notification tasks
+    "django_celery_beat",
+    "django_celery_results",
 ]
 
 LOCAL_APPS = [
@@ -62,6 +65,8 @@ LOCAL_APPS = [
     "accounting",
     "reporting",
     "central_control",
+    # Phase 16 — Notification & Communication Center
+    "notifications",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -261,6 +266,25 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
 # -----------------------------------------------------------------------------
+# Celery Beat — Periodic task schedule (Phase 16: notification maintenance)
+# -----------------------------------------------------------------------------
+CELERY_BEAT_SCHEDULE = {
+    # Retry pending/due delivery records every 2 minutes
+    "notifications-retry-pending-deliveries": {
+        "task":     "notifications.retry_pending_deliveries",
+        "schedule": 120,  # seconds
+    },
+    # Clean up old low-value notifications every day at 03:00 UTC
+    "notifications-cleanup-old": {
+        "task":     "notifications.cleanup_old_notifications",
+        "schedule": 86400,  # 24 hours
+    },
+}
+
+# Use Django database as beat scheduler backend (requires django_celery_beat)
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+# -----------------------------------------------------------------------------
 # Cache
 # -----------------------------------------------------------------------------
 CACHES = {
@@ -269,6 +293,23 @@ CACHES = {
         "LOCATION": REDIS_URL,
     }
 }
+
+# -----------------------------------------------------------------------------
+# Email — Phase 16: Notification delivery
+# Configure via environment variables; defaults to console backend in dev.
+# Never hard-code credentials here.
+# -----------------------------------------------------------------------------
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST          = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT          = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS       = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
+EMAIL_HOST_USER     = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")  # Always from env, never hardcoded
+DEFAULT_FROM_EMAIL  = os.getenv("DEFAULT_FROM_EMAIL", "noreply@restaurantflow.app")
+SERVER_EMAIL        = DEFAULT_FROM_EMAIL
 
 # -----------------------------------------------------------------------------
 # Security headers (non-DEBUG defaults)
@@ -403,6 +444,12 @@ LOGGING = {
         },
         "celery": {
             "handlers": ["console", "file_general"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        # Phase 16 — Notifications
+        "notifications": {
+            "handlers": ["console", "file_general", "file_errors"],
             "level": LOG_LEVEL,
             "propagate": False,
         },

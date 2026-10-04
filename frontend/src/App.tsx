@@ -77,6 +77,18 @@ import { RecipeDetailPage } from '@/pages/recipes/RecipeDetailPage'
 import { CreateRecipePage } from '@/pages/recipes/CreateRecipePage'
 import { ConsumptionHistoryPage } from '@/pages/inventory/ConsumptionHistoryPage'
 
+// Phase 15 — Central Control Center
+import { CentralControlDashboard } from '@/pages/central-control/CentralControlDashboard'
+import { AlertCenterPage } from '@/pages/central-control/AlertCenterPage'
+import { IssueCenterPage } from '@/pages/central-control/IssueCenterPage'
+import { RestaurantHealthPage } from '@/pages/central-control/RestaurantHealthPage'
+import { SystemHealthPage } from '@/pages/central-control/SystemHealthPage'
+import { EventTimelinePage } from '@/pages/central-control/EventTimelinePage'
+
+// Phase 16 — Notifications
+import { NotificationCenter } from '@/pages/notifications/NotificationCenter'
+import { NotificationPreferences } from '@/pages/notifications/NotificationPreferences'
+
 // Phase 14 — Reporting & Analytics
 import { ReportingDashboard } from '@/pages/reports/ReportingDashboard'
 import { SalesReportPage } from '@/pages/reports/SalesReportPage'
@@ -230,6 +242,18 @@ function App() {
           <Route path="/reports/inventory" element={<InventoryReportPage />} />
           <Route path="/reports/expenses" element={<ExpensesReportPage />} />
           <Route path="/reports/branches" element={<BranchesReportPage />} />
+
+          {/* Phase 15 — Central Control Center */}
+          <Route path="/central-control" element={<CentralControlDashboard />} />
+          <Route path="/central-control/alerts" element={<AlertCenterPage />} />
+          <Route path="/central-control/issues" element={<IssueCenterPage />} />
+          <Route path="/central-control/restaurants/health" element={<RestaurantHealthPage />} />
+          <Route path="/central-control/system-health" element={<SystemHealthPage />} />
+          <Route path="/central-control/events" element={<EventTimelinePage />} />
+
+          {/* Phase 16 — Notifications */}
+          <Route path="/notifications" element={<NotificationCenter />} />
+          <Route path="/settings/notifications" element={<NotificationPreferences />} />
         </Route>
       </Route>
 
