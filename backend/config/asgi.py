@@ -14,7 +14,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django_asgi_app = get_asgi_application()
 
 # Import WebSocket URL patterns after Django is fully initialized
-from kitchen.routing import websocket_urlpatterns  # noqa: E402
+from kitchen.routing import websocket_urlpatterns as kitchen_ws  # noqa: E402
+from central_control.routing import websocket_urlpatterns as cc_ws  # noqa: E402
+
+# Merge all WebSocket URL patterns
+all_websocket_urlpatterns = kitchen_ws + cc_ws
 
 application = ProtocolTypeRouter(
     {
@@ -22,7 +26,7 @@ application = ProtocolTypeRouter(
         "http": django_asgi_app,
         # WebSocket → Channels + JWT auth
         "websocket": AuthMiddlewareStack(
-            URLRouter(websocket_urlpatterns)
+            URLRouter(all_websocket_urlpatterns)
         ),
     }
 )
