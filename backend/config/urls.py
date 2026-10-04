@@ -25,6 +25,7 @@ urlpatterns = [
     path("api/", include("recipes.urls")),
     path("api/", include("financials.urls")),
     path("api/", include("accounting.urls")),
+    path("api/", include("reporting.urls")),
 ]
 
 # Serve media files in development

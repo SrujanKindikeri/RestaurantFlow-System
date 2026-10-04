@@ -77,6 +77,16 @@ import { RecipeDetailPage } from '@/pages/recipes/RecipeDetailPage'
 import { CreateRecipePage } from '@/pages/recipes/CreateRecipePage'
 import { ConsumptionHistoryPage } from '@/pages/inventory/ConsumptionHistoryPage'
 
+// Phase 14 — Reporting & Analytics
+import { ReportingDashboard } from '@/pages/reports/ReportingDashboard'
+import { SalesReportPage } from '@/pages/reports/SalesReportPage'
+import { MenuReportPage } from '@/pages/reports/MenuReportPage'
+import { PaymentsReportPage } from '@/pages/reports/PaymentsReportPage'
+import { KitchenReportPage } from '@/pages/reports/KitchenReportPage'
+import { InventoryReportPage } from '@/pages/reports/InventoryReportPage'
+import { ExpensesReportPage } from '@/pages/reports/ExpensesReportPage'
+import { BranchesReportPage } from '@/pages/reports/BranchesReportPage'
+
 // Phase 13 — Accounting
 import { AccountingDashboard } from '@/pages/accounting/AccountingDashboard'
 import { ChartOfAccountsPage } from '@/pages/accounting/ChartOfAccountsPage'
@@ -210,6 +220,16 @@ function App() {
           <Route path="/accounting/profit-loss" element={<ProfitLossPage />} />
           <Route path="/accounting/balance-sheet" element={<BalanceSheetPage />} />
           <Route path="/accounting/periods" element={<AccountingPeriodsPage />} />
+
+          {/* Phase 14 — Reporting & Analytics */}
+          <Route path="/reports" element={<ReportingDashboard />} />
+          <Route path="/reports/sales" element={<SalesReportPage />} />
+          <Route path="/reports/menu" element={<MenuReportPage />} />
+          <Route path="/reports/payments" element={<PaymentsReportPage />} />
+          <Route path="/reports/kitchen" element={<KitchenReportPage />} />
+          <Route path="/reports/inventory" element={<InventoryReportPage />} />
+          <Route path="/reports/expenses" element={<ExpensesReportPage />} />
+          <Route path="/reports/branches" element={<BranchesReportPage />} />
         </Route>
       </Route>
 

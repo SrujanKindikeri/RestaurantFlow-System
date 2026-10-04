@@ -188,6 +188,11 @@ const ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
   ),
+  reporting: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  ),
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -248,6 +253,15 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Profit & Loss', to: '/accounting/profit-loss', permission: 'accounting.profit_loss.view', icon: ICONS.profitLoss },
   { label: 'Balance Sheet', to: '/accounting/balance-sheet', permission: 'accounting.balance_sheet.view', icon: ICONS.balanceSheet },
   { label: 'Acc. Periods', to: '/accounting/periods', permission: 'accounting.period.view', icon: ICONS.periods },
+  // Phase 14 — Reporting
+  { label: 'Reports', to: '/reports', permission: 'reporting.dashboard.view', icon: ICONS.reporting },
+  { label: 'Sales', to: '/reports/sales', permission: 'reporting.sales.view', icon: ICONS.profitLoss },
+  { label: 'Menu', to: '/reports/menu', permission: 'reporting.menu.view', icon: ICONS.menu },
+  { label: 'Payments', to: '/reports/payments', permission: 'reporting.payment.view', icon: ICONS.sessions },
+  { label: 'Kitchen', to: '/reports/kitchen', permission: 'reporting.kitchen.view', icon: ICONS.kitchen },
+  { label: 'Inventory', to: '/reports/inventory', permission: 'reporting.inventory.view', icon: ICONS.inventory },
+  { label: 'Expenses', to: '/reports/expenses', permission: 'reporting.expense.view', icon: ICONS.billing },
+  { label: 'Branches', to: '/reports/branches', permission: 'reporting.branch.view', icon: ICONS.branches },
 ]
 
 const COUNTER_PERMS = new Set(['counter.view', 'counter.session.view'])
@@ -271,6 +285,11 @@ const ACCOUNTING_PERMS = new Set([
   'accounting.trial_balance.view', 'accounting.profit_loss.view',
   'accounting.balance_sheet.view', 'accounting.period.view',
   'accounting.configuration.view',
+])
+const REPORTING_PERMS = new Set([
+  'reporting.dashboard.view', 'reporting.sales.view', 'reporting.orders.view',
+  'reporting.menu.view', 'reporting.payment.view', 'reporting.kitchen.view',
+  'reporting.inventory.view', 'reporting.expense.view', 'reporting.branch.view',
 ])const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
 const ORDER_PERMS = new Set(['table.view', 'order.view.branch', 'order.create.dine_in', 'order.create.counter', 'order.create.takeaway'])
 const KITCHEN_PERMS = new Set(['kitchen.view', 'kitchen.view_history'])
@@ -325,7 +344,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 12</p>
+            <p className="text-[10px] text-gray-600 font-mono">Phase 14</p>
           </div>
         </div>
 
@@ -543,10 +562,67 @@ export function MainLayout() {
             </>
           )}
 
-          {/* Phase 12 — Financial Operations section */}
-          {visibleItems.some(i => FINANCIAL_PERMS.has(i.permission ?? '')) && (
+          {/* Phase 13 — Accounting section */}
+          {visibleItems.some(i => ACCOUNTING_PERMS.has(i.permission ?? '')) && (
             <>
               <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Accounting
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {visibleItems.filter(i => ACCOUNTING_PERMS.has(i.permission ?? '')).map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.to === '/accounting'}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          isActive
+                            ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                            : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                        )
+                      }
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {/* Phase 14 — Reporting section */}
+          {visibleItems.some(i => REPORTING_PERMS.has(i.permission ?? '')) && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Reports
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {visibleItems.filter(i => REPORTING_PERMS.has(i.permission ?? '')).map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.to === '/reports'}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          isActive
+                            ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                            : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                        )
+                      }
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}ray-700 uppercase tracking-widest">
                 Financials
               </p>
               <ul className="space-y-0.5" role="list">
