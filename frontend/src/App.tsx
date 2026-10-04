@@ -77,6 +77,16 @@ import { RecipeDetailPage } from '@/pages/recipes/RecipeDetailPage'
 import { CreateRecipePage } from '@/pages/recipes/CreateRecipePage'
 import { ConsumptionHistoryPage } from '@/pages/inventory/ConsumptionHistoryPage'
 
+// Phase 13 — Accounting
+import { AccountingDashboard } from '@/pages/accounting/AccountingDashboard'
+import { ChartOfAccountsPage } from '@/pages/accounting/ChartOfAccountsPage'
+import { JournalEntriesPage } from '@/pages/accounting/JournalEntriesPage'
+import { GeneralLedgerPage } from '@/pages/accounting/GeneralLedgerPage'
+import { TrialBalancePage } from '@/pages/accounting/TrialBalancePage'
+import { ProfitLossPage } from '@/pages/accounting/ProfitLossPage'
+import { BalanceSheetPage } from '@/pages/accounting/BalanceSheetPage'
+import { AccountingPeriodsPage } from '@/pages/accounting/AccountingPeriodsPage'
+
 // Phase 12 — Financial Operations
 import { FinancialDashboard } from '@/pages/financials/FinancialDashboard'
 import { ExpensesPage } from '@/pages/financials/ExpensesPage'
@@ -190,6 +200,16 @@ function App() {
           <Route path="/financials/categories" element={<ExpenseCategoriesPage />} />
           <Route path="/financials/supplier-invoices" element={<SupplierInvoicesPage />} />
           <Route path="/financials/payables" element={<PayablesPage />} />
+
+          {/* Phase 13 — Accounting */}
+          <Route path="/accounting" element={<AccountingDashboard />} />
+          <Route path="/accounting/accounts" element={<ChartOfAccountsPage />} />
+          <Route path="/accounting/journals" element={<JournalEntriesPage />} />
+          <Route path="/accounting/general-ledger" element={<GeneralLedgerPage />} />
+          <Route path="/accounting/trial-balance" element={<TrialBalancePage />} />
+          <Route path="/accounting/profit-loss" element={<ProfitLossPage />} />
+          <Route path="/accounting/balance-sheet" element={<BalanceSheetPage />} />
+          <Route path="/accounting/periods" element={<AccountingPeriodsPage />} />
         </Route>
       </Route>
 

@@ -147,6 +147,47 @@ const ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
     </svg>
   ),
+  // Phase 13 — Accounting icons
+  accounting: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16a2 2 0 002 2z" />
+    </svg>
+  ),
+  chartOfAccounts: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    </svg>
+  ),
+  journals: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  ),
+  ledger: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  ),
+  trialBalance: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+    </svg>
+  ),
+  profitLoss: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  ),
+  balanceSheet: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  ),
+  periods: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  ),
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -198,6 +239,15 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Categories', to: '/financials/categories', permission: 'expense.category.view', icon: ICONS.corrections },
   { label: 'Supplier Invoices', to: '/financials/supplier-invoices', permission: 'supplier_invoice.view', icon: ICONS.purchases },
   { label: 'Payables', to: '/financials/payables', permission: 'payable.view', icon: ICONS.stock },
+  // Phase 13 — Accounting
+  { label: 'Accounting', to: '/accounting', permission: 'accounting.ledger.view', icon: ICONS.accounting },
+  { label: 'Chart of Accounts', to: '/accounting/accounts', permission: 'accounting.account.view', icon: ICONS.chartOfAccounts },
+  { label: 'Journal Entries', to: '/accounting/journals', permission: 'accounting.journal.view', icon: ICONS.journals },
+  { label: 'General Ledger', to: '/accounting/general-ledger', permission: 'accounting.ledger.view', icon: ICONS.ledger },
+  { label: 'Trial Balance', to: '/accounting/trial-balance', permission: 'accounting.trial_balance.view', icon: ICONS.trialBalance },
+  { label: 'Profit & Loss', to: '/accounting/profit-loss', permission: 'accounting.profit_loss.view', icon: ICONS.profitLoss },
+  { label: 'Balance Sheet', to: '/accounting/balance-sheet', permission: 'accounting.balance_sheet.view', icon: ICONS.balanceSheet },
+  { label: 'Acc. Periods', to: '/accounting/periods', permission: 'accounting.period.view', icon: ICONS.periods },
 ]
 
 const COUNTER_PERMS = new Set(['counter.view', 'counter.session.view'])
@@ -215,6 +265,12 @@ const INVENTORY_PERMS = new Set([
 const FINANCIAL_PERMS = new Set([
   'financial.dashboard.view', 'expense.view', 'expense.category.view',
   'supplier_invoice.view', 'payable.view',
+])
+const ACCOUNTING_PERMS = new Set([
+  'accounting.ledger.view', 'accounting.account.view', 'accounting.journal.view',
+  'accounting.trial_balance.view', 'accounting.profit_loss.view',
+  'accounting.balance_sheet.view', 'accounting.period.view',
+  'accounting.configuration.view',
 ])const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
 const ORDER_PERMS = new Set(['table.view', 'order.view.branch', 'order.create.dine_in', 'order.create.counter', 'order.create.takeaway'])
 const KITCHEN_PERMS = new Set(['kitchen.view', 'kitchen.view_history'])

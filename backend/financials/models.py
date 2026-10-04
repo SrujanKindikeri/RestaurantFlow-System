@@ -83,6 +83,22 @@ class ExpenseCategory(TimestampedModel):
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
 
+    # -------------------------------------------------------------------------
+    # Phase 13: Accounting integration
+    # -------------------------------------------------------------------------
+    expense_account = models.ForeignKey(
+        "accounting.Account",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="expense_categories",
+        help_text=(
+            "The accounting expense account to debit when expenses "
+            "in this category are approved. "
+            "Must be an EXPENSE-type account from the same restaurant."
+        ),
+    )
+
     class Meta:
         verbose_name = "Expense Category"
         verbose_name_plural = "Expense Categories"
