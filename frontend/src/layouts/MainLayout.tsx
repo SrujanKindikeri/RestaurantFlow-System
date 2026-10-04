@@ -191,6 +191,13 @@ const NAV_ITEMS: NavItem[] = [
   // Phase 11 — Recipes & Consumption
   { label: 'Recipes', to: '/recipes', permission: 'recipe.view', icon: ICONS.inventory },
   { label: 'Consumption', to: '/inventory/consumption', permission: 'inventory.consumption.view', icon: ICONS.stock },
+
+  // Phase 12 — Financial Operations
+  { label: 'Financials', to: '/financials', permission: 'financial.dashboard.view', icon: ICONS.billing },
+  { label: 'Expenses', to: '/financials/expenses', permission: 'expense.view', icon: ICONS.bills },
+  { label: 'Categories', to: '/financials/categories', permission: 'expense.category.view', icon: ICONS.corrections },
+  { label: 'Supplier Invoices', to: '/financials/supplier-invoices', permission: 'supplier_invoice.view', icon: ICONS.purchases },
+  { label: 'Payables', to: '/financials/payables', permission: 'payable.view', icon: ICONS.stock },
 ]
 
 const COUNTER_PERMS = new Set(['counter.view', 'counter.session.view'])
@@ -204,6 +211,10 @@ const INVENTORY_PERMS = new Set([
   // Phase 11
   'recipe.view', 'recipe.create', 'recipe.update', 'recipe.activate', 'recipe.archive',
   'inventory.consumption.view', 'inventory.consumption.manual', 'inventory.consumption.reverse',
+])
+const FINANCIAL_PERMS = new Set([
+  'financial.dashboard.view', 'expense.view', 'expense.category.view',
+  'supplier_invoice.view', 'payable.view',
 ])const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
 const ORDER_PERMS = new Set(['table.view', 'order.view.branch', 'order.create.dine_in', 'order.create.counter', 'order.create.takeaway'])
 const KITCHEN_PERMS = new Set(['kitchen.view', 'kitchen.view_history'])
@@ -258,7 +269,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 11</p>
+            <p className="text-[10px] text-gray-600 font-mono">Phase 12</p>
           </div>
         </div>
 
@@ -457,6 +468,37 @@ export function MainLayout() {
                     <NavLink
                       to={item.to}
                       end={item.to === '/inventory'}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                          isActive
+                            ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                            : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                        )
+                      }
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {/* Phase 12 — Financial Operations section */}
+          {visibleItems.some(i => FINANCIAL_PERMS.has(i.permission ?? '')) && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Financials
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {visibleItems.filter(i => FINANCIAL_PERMS.has(i.permission ?? '')).map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.to === '/financials'}
                       onClick={() => setSidebarOpen(false)}
                       className={({ isActive }) =>
                         cn(

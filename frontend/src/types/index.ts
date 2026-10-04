@@ -2224,3 +2224,330 @@ export interface ConsumptionListParams {
   date?: string
   order?: string
 }
+
+// =============================================================================
+// Phase 12 — Financials
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Expense Category
+// ---------------------------------------------------------------------------
+
+export interface ExpenseCategory {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  name: string
+  code: string
+  description: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateExpenseCategoryPayload {
+  restaurant: string
+  name: string
+  code: string
+  description?: string
+  is_active?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Expense
+// ---------------------------------------------------------------------------
+
+export type ExpenseStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+export type ExpensePaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID'
+
+export interface UserMinimal {
+  id: number
+  email: string
+  full_name: string
+}
+
+export interface ExpenseApproval {
+  id: string
+  expense: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  requested_by: number
+  requested_by_detail: UserMinimal
+  reviewed_by: number | null
+  reviewed_by_detail: UserMinimal | null
+  reviewed_at: string | null
+  approval_note: string
+  rejection_reason: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ExpenseAttachment {
+  id: string
+  expense: string
+  file: string
+  file_url: string | null
+  file_name: string
+  file_type: string
+  file_size: number
+  uploaded_by: number
+  uploaded_by_detail: UserMinimal
+  uploaded_at: string
+}
+
+export interface Expense {
+  id: string
+  expense_number: string
+  restaurant: string
+  restaurant_name: string
+  branch: string | null
+  branch_name: string | null
+  category: string
+  category_name: string
+  category_code: string
+  title: string
+  amount: string
+  tax_amount: string
+  total_amount: string
+  expense_date: string
+  due_date: string | null
+  vendor_name: string
+  vendor_reference: string
+  status: ExpenseStatus
+  payment_status: ExpensePaymentStatus
+  created_by: number
+  created_by_email: string
+  submitted_at: string | null
+  approved_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ExpenseDetail extends Expense {
+  description: string
+  notes: string
+  submitted_by: number | null
+  submitted_by_detail: UserMinimal | null
+  approved_by: number | null
+  approved_by_detail: UserMinimal | null
+  rejected_by: number | null
+  rejected_by_detail: UserMinimal | null
+  rejected_at: string | null
+  rejection_reason: string
+  attachments: ExpenseAttachment[]
+  approvals: ExpenseApproval[]
+}
+
+export interface CreateExpensePayload {
+  restaurant: string
+  branch?: string | null
+  category: string
+  title: string
+  description?: string
+  amount: string
+  tax_amount?: string
+  expense_date: string
+  due_date?: string | null
+  vendor_name?: string
+  vendor_reference?: string
+  notes?: string
+}
+
+export interface UpdateExpensePayload {
+  category?: string
+  title?: string
+  description?: string
+  amount?: string
+  tax_amount?: string
+  expense_date?: string
+  due_date?: string | null
+  vendor_name?: string
+  vendor_reference?: string
+  notes?: string
+  branch?: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Expense Correction
+// ---------------------------------------------------------------------------
+
+export type CorrectionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+export type CorrectionType = 'AMOUNT_CORRECTION' | 'CATEGORY_CORRECTION' | 'DATE_CORRECTION' | 'VENDOR_CORRECTION' | 'CANCELLATION' | 'OTHER'
+
+export interface ExpenseCorrectionRequest {
+  id: string
+  expense: string
+  expense_number: string
+  requested_by: number
+  requested_by_detail: UserMinimal
+  correction_type: CorrectionType
+  requested_data: Record<string, string>
+  reason: string
+  status: CorrectionStatus
+  reviewed_by: number | null
+  reviewed_by_detail: UserMinimal | null
+  reviewed_at: string | null
+  review_note: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateCorrectionRequestPayload {
+  correction_type: CorrectionType
+  requested_data: Record<string, string>
+  reason: string
+}
+
+// ---------------------------------------------------------------------------
+// Recurring Expense
+// ---------------------------------------------------------------------------
+
+export type RecurringFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY'
+
+export interface RecurringExpense {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  branch: string | null
+  branch_name: string | null
+  category: string
+  category_name: string
+  title: string
+  description: string
+  amount: string
+  tax_amount: string
+  frequency: RecurringFrequency
+  start_date: string
+  end_date: string | null
+  next_run_date: string
+  is_active: boolean
+  created_by: number
+  created_by_detail: UserMinimal
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateRecurringExpensePayload {
+  restaurant: string
+  branch?: string | null
+  category: string
+  title: string
+  description?: string
+  amount: string
+  tax_amount?: string
+  frequency: RecurringFrequency
+  start_date: string
+  end_date?: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Supplier Invoice
+// ---------------------------------------------------------------------------
+
+export type SupplierInvoiceStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED'
+
+export interface SupplierInvoice {
+  id: string
+  invoice_number: string
+  external_invoice_number: string
+  restaurant: string
+  restaurant_name: string
+  branch: string | null
+  branch_name: string | null
+  supplier: string
+  supplier_name: string
+  purchase_order: string | null
+  purchase_number: string | null
+  invoice_date: string
+  due_date: string | null
+  subtotal: string
+  tax_amount: string
+  discount_amount: string
+  total_amount: string
+  status: SupplierInvoiceStatus
+  created_by: number
+  created_by_email: string
+  approved_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SupplierInvoiceDetail extends SupplierInvoice {
+  approved_by: number | null
+  approved_by_detail: UserMinimal | null
+  notes: string
+  payable_id: string | null
+}
+
+export interface CreateSupplierInvoicePayload {
+  restaurant: string
+  branch?: string | null
+  supplier: string
+  purchase_order?: string | null
+  external_invoice_number?: string
+  invoice_date: string
+  due_date?: string | null
+  subtotal?: string
+  tax_amount?: string
+  discount_amount?: string
+  notes?: string
+}
+
+// ---------------------------------------------------------------------------
+// Payable
+// ---------------------------------------------------------------------------
+
+export type PayableStatus = 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED'
+export type PayableType = 'SUPPLIER_INVOICE' | 'EXPENSE'
+
+export interface Payable {
+  id: string
+  restaurant: string
+  restaurant_name: string
+  branch: string | null
+  branch_name: string | null
+  payable_type: PayableType
+  supplier_invoice: string | null
+  expense: string | null
+  reference_number: string
+  amount: string
+  paid_amount: string
+  remaining_amount: string
+  due_date: string | null
+  status: PayableStatus
+  supplier_name: string | null
+  is_overdue: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard
+// ---------------------------------------------------------------------------
+
+export interface FinancialDashboard {
+  total_expenses: number
+  pending_approval: number
+  approved_expenses: number
+  rejected_expenses: number
+  unpaid_expenses: number
+  partially_paid: number
+  overdue_payables: number
+  total_payable_amount: string
+  total_paid_amount: string
+  total_remaining_amount: string
+  category_summary: Array<{ category__name: string; category__code: string; count: number; total: string }>
+  branch_summary: Array<{ branch__name: string; count: number; total: string }>
+  recent_expenses: Expense[]
+}
+
+export interface PayableDashboard {
+  total_payables: number
+  open_payables: number
+  partially_paid: number
+  paid_payables: number
+  overdue_payables: number
+  total_amount: string
+  paid_amount: string
+  remaining_amount: string
+  by_type: Array<{ type: PayableType; count: number; total: string }>
+}

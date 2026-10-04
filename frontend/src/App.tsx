@@ -77,6 +77,15 @@ import { RecipeDetailPage } from '@/pages/recipes/RecipeDetailPage'
 import { CreateRecipePage } from '@/pages/recipes/CreateRecipePage'
 import { ConsumptionHistoryPage } from '@/pages/inventory/ConsumptionHistoryPage'
 
+// Phase 12 — Financial Operations
+import { FinancialDashboard } from '@/pages/financials/FinancialDashboard'
+import { ExpensesPage } from '@/pages/financials/ExpensesPage'
+import { ExpenseDetailPage } from '@/pages/financials/ExpenseDetailPage'
+import { CreateExpensePage } from '@/pages/financials/CreateExpensePage'
+import { ExpenseCategoriesPage } from '@/pages/financials/ExpenseCategoriesPage'
+import { SupplierInvoicesPage } from '@/pages/financials/SupplierInvoicesPage'
+import { PayablesPage } from '@/pages/financials/PayablesPage'
+
 function App() {
   return (
     <Routes>
@@ -172,6 +181,15 @@ function App() {
           <Route path="/recipes/new" element={<CreateRecipePage />} />
           <Route path="/recipes/:id" element={<RecipeDetailPage />} />
           <Route path="/inventory/consumption" element={<ConsumptionHistoryPage />} />
+
+          {/* Phase 12 — Financial Operations */}
+          <Route path="/financials" element={<FinancialDashboard />} />
+          <Route path="/financials/expenses" element={<ExpensesPage />} />
+          <Route path="/financials/expenses/new" element={<CreateExpensePage />} />
+          <Route path="/financials/expenses/:id" element={<ExpenseDetailPage />} />
+          <Route path="/financials/categories" element={<ExpenseCategoriesPage />} />
+          <Route path="/financials/supplier-invoices" element={<SupplierInvoicesPage />} />
+          <Route path="/financials/payables" element={<PayablesPage />} />
         </Route>
       </Route>
 
