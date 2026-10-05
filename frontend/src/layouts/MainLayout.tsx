@@ -351,7 +351,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 16</p>
+            <p className="text-[10px] text-gray-600 font-mono">Phase 18</p>
           </div>
         </div>
 
@@ -702,6 +702,76 @@ export function MainLayout() {
             </li>
           </ul>
 
+          {/* Phase 18 — Marketing section */}
+          {hasPermission('marketing.dashboard.view') && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Marketing
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {[
+                  {
+                    label: 'Marketing Dashboard', to: '/marketing',
+                    permission: 'marketing.dashboard.view',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: 'Campaigns', to: '/marketing/campaigns',
+                    permission: 'marketing.campaign.view',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: 'Promotions', to: '/marketing/promotions',
+                    permission: 'marketing.promotion.view',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: 'Analytics', to: '/marketing/analytics',
+                    permission: 'marketing.analytics.view',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    ),
+                  },
+                ]
+                  .filter(item => hasPermission(item.permission))
+                  .map(item => (
+                    <li key={item.to}>
+                      <NavLink
+                        to={item.to}
+                        end={item.to === '/marketing'}
+                        onClick={() => setSidebarOpen(false)}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                            isActive
+                              ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                              : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                          )
+                        }
+                      >
+                        {item.icon}
+                        {item.label}
+                      </NavLink>
+                    </li>
+                  ))}
+              </ul>
+            </>
+          )}
+
           {/* Phase 17 — CRM section */}
           {hasPermission('customer.view') && (
             <>
@@ -798,7 +868,7 @@ export function MainLayout() {
             <div className="hidden sm:flex items-center gap-2">
               <span className="text-xs text-gray-600">{user.email}</span>
               <span className="text-gray-700">·</span>
-              <span className="text-xs text-gray-600">Phase 16</span>
+              <span className="text-xs text-gray-600">Phase 18</span>
             </div>
           )}
         </header>

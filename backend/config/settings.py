@@ -69,6 +69,8 @@ LOCAL_APPS = [
     "notifications",
     # Phase 17 — Customer CRM, Loyalty & Feedback
     "crm",
+    # Phase 18 — Marketing, Promotions & Campaign Management
+    "marketing",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -292,6 +294,27 @@ CELERY_BEAT_SCHEDULE = {
     },
     "crm-run-segmentation": {
         "task":     "crm.run_segmentation_all_restaurants",
+        "schedule": 86400,  # daily
+    },
+    # Phase 18 — Marketing, Promotions & Campaign Management
+    "marketing-expire-campaigns": {
+        "task":     "marketing.expire_campaigns",
+        "schedule": 300,    # every 5 minutes
+    },
+    "marketing-expire-promotions": {
+        "task":     "marketing.expire_promotions",
+        "schedule": 3600,   # hourly
+    },
+    "marketing-update-delivery-status": {
+        "task":     "marketing.update_campaign_delivery_status",
+        "schedule": 300,    # every 5 minutes
+    },
+    "marketing-calculate-metrics": {
+        "task":     "marketing.calculate_campaign_metrics",
+        "schedule": 1800,   # every 30 minutes
+    },
+    "marketing-cleanup-data": {
+        "task":     "marketing.cleanup_campaign_data_if_configured",
         "schedule": 86400,  # daily
     },
 }

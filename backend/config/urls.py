@@ -31,6 +31,8 @@ urlpatterns = [
     path("api/", include("notifications.urls")),
     # Phase 17 — CRM, Loyalty & Feedback
     path("api/", include("crm.urls")),
+    # Phase 18 — Marketing, Promotions & Campaign Management
+    path("api/", include("marketing.urls")),
 ]
 
 # Serve media files in development

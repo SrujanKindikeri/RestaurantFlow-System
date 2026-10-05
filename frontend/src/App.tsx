@@ -89,6 +89,13 @@ import { EventTimelinePage } from '@/pages/central-control/EventTimelinePage'
 import { NotificationCenter } from '@/pages/notifications/NotificationCenter'
 import { NotificationPreferences } from '@/pages/notifications/NotificationPreferences'
 
+// Phase 18 — Marketing, Promotions & Campaigns
+import { MarketingDashboard } from '@/pages/marketing/MarketingDashboard'
+import { CampaignsListPage } from '@/pages/marketing/CampaignsListPage'
+import { CampaignDetailPage } from '@/pages/marketing/CampaignDetailPage'
+import { PromotionsPage } from '@/pages/marketing/PromotionsPage'
+import { MarketingAnalyticsPage } from '@/pages/marketing/MarketingAnalyticsPage'
+
 // Phase 17 — CRM, Loyalty & Feedback
 import { CustomerListPage } from '@/pages/crm/CustomerListPage'
 import { CustomerDetailPage } from '@/pages/crm/CustomerDetailPage'
@@ -272,6 +279,15 @@ function App() {
           <Route path="/crm/rewards" element={<CRMRewardsPage />} />
           <Route path="/crm/loyalty" element={<CRMLoyaltyPage />} />
           <Route path="/crm/feedback" element={<CRMFeedbackPage />} />
+
+          {/* Phase 18 — Marketing, Promotions & Campaigns */}
+          <Route path="/marketing" element={<MarketingDashboard />} />
+          <Route path="/marketing/campaigns" element={<CampaignsListPage />} />
+          <Route path="/marketing/campaigns/new" element={<CampaignsListPage />} />
+          <Route path="/marketing/campaigns/:id" element={<CampaignDetailPage />} />
+          <Route path="/marketing/promotions" element={<PromotionsPage />} />
+          <Route path="/marketing/promotions/new" element={<PromotionsPage />} />
+          <Route path="/marketing/analytics" element={<MarketingAnalyticsPage />} />
         </Route>
       </Route>
 
