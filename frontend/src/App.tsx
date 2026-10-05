@@ -89,6 +89,15 @@ import { EventTimelinePage } from '@/pages/central-control/EventTimelinePage'
 import { NotificationCenter } from '@/pages/notifications/NotificationCenter'
 import { NotificationPreferences } from '@/pages/notifications/NotificationPreferences'
 
+// Phase 17 — CRM, Loyalty & Feedback
+import { CustomerListPage } from '@/pages/crm/CustomerListPage'
+import { CustomerDetailPage } from '@/pages/crm/CustomerDetailPage'
+import { CRMDashboard } from '@/pages/crm/CRMDashboard'
+import { CRMSegmentsPage } from '@/pages/crm/CRMSegmentsPage'
+import { CRMRewardsPage } from '@/pages/crm/CRMRewardsPage'
+import { CRMLoyaltyPage } from '@/pages/crm/CRMLoyaltyPage'
+import { CRMFeedbackPage } from '@/pages/crm/CRMFeedbackPage'
+
 // Phase 14 — Reporting & Analytics
 import { ReportingDashboard } from '@/pages/reports/ReportingDashboard'
 import { SalesReportPage } from '@/pages/reports/SalesReportPage'
@@ -254,6 +263,15 @@ function App() {
           {/* Phase 16 — Notifications */}
           <Route path="/notifications" element={<NotificationCenter />} />
           <Route path="/settings/notifications" element={<NotificationPreferences />} />
+
+          {/* Phase 17 — CRM */}
+          <Route path="/crm" element={<CRMDashboard />} />
+          <Route path="/customers" element={<CustomerListPage />} />
+          <Route path="/customers/:id" element={<CustomerDetailPage />} />
+          <Route path="/crm/segments" element={<CRMSegmentsPage />} />
+          <Route path="/crm/rewards" element={<CRMRewardsPage />} />
+          <Route path="/crm/loyalty" element={<CRMLoyaltyPage />} />
+          <Route path="/crm/feedback" element={<CRMFeedbackPage />} />
         </Route>
       </Route>
 

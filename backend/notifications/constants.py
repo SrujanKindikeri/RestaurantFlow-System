@@ -122,6 +122,12 @@ NOTIFICATION_TYPE_CHOICES = [
     # System
     (NOTIF_SYSTEM_HEALTH_DEGRADED, "System Health Degraded"),
     (NOTIF_NOTIFICATION_PROVIDER_FAILURE, "Notification Provider Failure"),
+    # Phase 17 — CRM
+    ("CRM_LOYALTY_POINTS_EARNED", "Loyalty Points Earned"),
+    ("CRM_REWARD_AVAILABLE",      "Reward Available"),
+    ("CRM_REWARD_EXPIRING",       "Reward Expiring"),
+    ("CRM_FEEDBACK_SUBMITTED",    "Customer Feedback Submitted"),
+    ("CRM_FEEDBACK_RESPONSE",     "Customer Feedback Response"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -253,6 +259,13 @@ SOURCE_TYPE_CHOICES = [
     (SOURCE_USER,               "User"),
     (SOURCE_COUNTER_SESSION,    "Counter Session"),
     (SOURCE_SYSTEM,             "System"),
+    # Phase 17 — CRM
+    ("CUSTOMER",          "Customer"),
+    ("LOYALTY_ACCOUNT",   "Loyalty Account"),
+    ("LOYALTY_TRANSACTION","Loyalty Transaction"),
+    ("REWARD",            "Reward"),
+    ("REWARD_REDEMPTION", "Reward Redemption"),
+    ("FEEDBACK",          "Feedback"),
 ]
 
 # ---------------------------------------------------------------------------

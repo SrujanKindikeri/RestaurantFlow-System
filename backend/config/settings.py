@@ -67,6 +67,8 @@ LOCAL_APPS = [
     "central_control",
     # Phase 16 — Notification & Communication Center
     "notifications",
+    # Phase 17 — Customer CRM, Loyalty & Feedback
+    "crm",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -278,6 +280,19 @@ CELERY_BEAT_SCHEDULE = {
     "notifications-cleanup-old": {
         "task":     "notifications.cleanup_old_notifications",
         "schedule": 86400,  # 24 hours
+    },
+    # Phase 17 — CRM periodic tasks
+    "crm-expire-loyalty-points": {
+        "task":     "crm.expire_loyalty_points",
+        "schedule": 86400,  # daily
+    },
+    "crm-cleanup-expired-redemptions": {
+        "task":     "crm.cleanup_expired_redemptions",
+        "schedule": 3600,  # hourly
+    },
+    "crm-run-segmentation": {
+        "task":     "crm.run_segmentation_all_restaurants",
+        "schedule": 86400,  # daily
     },
 }
 

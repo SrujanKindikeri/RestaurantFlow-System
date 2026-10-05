@@ -296,6 +296,7 @@ const REPORTING_PERMS = new Set([
 const ORDER_PERMS = new Set(['table.view', 'order.view.branch', 'order.create.dine_in', 'order.create.counter', 'order.create.takeaway'])
 const KITCHEN_PERMS = new Set(['kitchen.view', 'kitchen.view_history'])
 const BILLING_PERMS = new Set(['bill.view', 'bill.correction.request'])
+const CRM_PERMS = new Set(['customer.view', 'crm.dashboard.view'])
 
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -700,6 +701,48 @@ export function MainLayout() {
               </NavLink>
             </li>
           </ul>
+
+          {/* Phase 17 — CRM section */}
+          {hasPermission('customer.view') && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Customers & CRM
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {[
+                  { label: 'CRM Dashboard', to: '/crm', permission: 'crm.dashboard.view' },
+                  { label: 'Customers', to: '/customers', permission: 'customer.view' },
+                  { label: 'Feedback', to: '/crm/feedback', permission: 'feedback.view' },
+                  { label: 'Segments', to: '/crm/segments', permission: 'customer.segment.view' },
+                  { label: 'Rewards', to: '/crm/rewards', permission: 'reward.view' },
+                  { label: 'Loyalty', to: '/crm/loyalty', permission: 'loyalty.view' },
+                ]
+                  .filter(item => hasPermission(item.permission))
+                  .map(item => (
+                    <li key={item.to}>
+                      <NavLink
+                        to={item.to}
+                        end={item.to === '/crm'}
+                        onClick={() => setSidebarOpen(false)}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                            isActive
+                              ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                              : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                          )
+                        }
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {item.label}
+                      </NavLink>
+                    </li>
+                  ))}
+              </ul>
+            </>
+          )}
 
         </nav>
 

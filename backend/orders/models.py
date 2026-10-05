@@ -446,6 +446,23 @@ class Order(TimestampedModel):
     )
     cancellation_reason = models.TextField(blank=True)
 
+    # -------------------------------------------------------------------------
+    # Phase 17 — CRM: Optional customer link
+    # Null for anonymous/guest orders. Existing orders are unaffected.
+    # Do NOT make this mandatory — guest orders must keep working.
+    # -------------------------------------------------------------------------
+    customer = models.ForeignKey(
+        "crm.Customer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        help_text=(
+            "Optional CRM customer link. Null for anonymous/guest orders. "
+            "Never required — POS can create orders without a customer."
+        ),
+    )
+
     class Meta:
         verbose_name = "Order"
         verbose_name_plural = "Orders"
@@ -460,6 +477,8 @@ class Order(TimestampedModel):
             models.Index(fields=["assigned_waiter", "status"]),
             models.Index(fields=["created_by", "status"]),
             models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["customer", "status"]),
+            models.Index(fields=["customer", "created_at"]),
         ]
 
     def __str__(self):
