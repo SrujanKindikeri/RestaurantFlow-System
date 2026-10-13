@@ -96,6 +96,15 @@ import { CampaignDetailPage } from '@/pages/marketing/CampaignDetailPage'
 import { PromotionsPage } from '@/pages/marketing/PromotionsPage'
 import { MarketingAnalyticsPage } from '@/pages/marketing/MarketingAnalyticsPage'
 
+// Phase 19 — Advanced POS & Restaurant Operations
+import { OperationsDashboard } from '@/pages/operations/OperationsDashboard'
+import { POSPage } from '@/pages/operations/POSPage'
+import { TablesPage } from '@/pages/operations/TablesPage'
+import { WaiterPage } from '@/pages/operations/WaiterPage'
+import { CashierPage } from '@/pages/operations/CashierPage'
+import { ShiftsPage } from '@/pages/operations/ShiftsPage'
+import { ShiftDetailPage } from '@/pages/operations/ShiftDetailPage'
+
 // Phase 17 — CRM, Loyalty & Feedback
 import { CustomerListPage } from '@/pages/crm/CustomerListPage'
 import { CustomerDetailPage } from '@/pages/crm/CustomerDetailPage'
@@ -288,6 +297,14 @@ function App() {
           <Route path="/marketing/promotions" element={<PromotionsPage />} />
           <Route path="/marketing/promotions/new" element={<PromotionsPage />} />
           <Route path="/marketing/analytics" element={<MarketingAnalyticsPage />} />
+          {/* Phase 19 — Operations */}
+          <Route path="/operations" element={<OperationsDashboard />} />
+          <Route path="/operations/pos" element={<POSPage />} />
+          <Route path="/operations/tables" element={<TablesPage />} />
+          <Route path="/operations/waiter" element={<WaiterPage />} />
+          <Route path="/operations/cashier" element={<CashierPage />} />
+          <Route path="/operations/shifts" element={<ShiftsPage />} />
+          <Route path="/operations/shifts/:id" element={<ShiftDetailPage />} />
         </Route>
       </Route>
 

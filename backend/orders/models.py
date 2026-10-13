@@ -73,6 +73,8 @@ class OrderStatus(models.TextChoices):
     DRAFT     = "DRAFT",     "Draft"
     CONFIRMED = "CONFIRMED", "Confirmed"
     CANCELLED = "CANCELLED", "Cancelled"
+    # Phase 19 — POS hold/resume workflow
+    ON_HOLD   = "ON_HOLD",   "On Hold"
     # Phase 7 will extend: ACCEPTED, PREPARING, READY, SERVED, COLLECTED
 
 

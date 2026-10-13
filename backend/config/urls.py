@@ -33,6 +33,8 @@ urlpatterns = [
     path("api/", include("crm.urls")),
     # Phase 18 — Marketing, Promotions & Campaign Management
     path("api/", include("marketing.urls")),
+    # Phase 19 — Advanced POS & Restaurant Operations
+    path("api/", include("operations.urls")),
 ]
 
 # Serve media files in development

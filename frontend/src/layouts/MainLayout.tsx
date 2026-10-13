@@ -351,7 +351,7 @@ export function MainLayout() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm tracking-tight truncate">RestaurantFlow</p>
-            <p className="text-[10px] text-gray-600 font-mono">Phase 18</p>
+             <p className="text-[10px] text-gray-600 font-mono">Phase 19</p>
           </div>
         </div>
 
@@ -753,6 +753,94 @@ export function MainLayout() {
                       <NavLink
                         to={item.to}
                         end={item.to === '/marketing'}
+                        onClick={() => setSidebarOpen(false)}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                            isActive
+                              ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                              : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
+                          )
+                        }
+                      >
+                        {item.icon}
+                        {item.label}
+                      </NavLink>
+                    </li>
+                  ))}
+              </ul>
+            </>
+          )}
+
+          {/* Phase 19 — Operations section */}
+          {hasPermission('operations.dashboard.view') && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
+                Operations
+              </p>
+              <ul className="space-y-0.5" role="list">
+                {[
+                  {
+                    label: 'Operations', to: '/operations',
+                    permission: 'operations.dashboard.view',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: 'POS Terminal', to: '/operations/pos',
+                    permission: 'pos.access',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: 'Table Map', to: '/operations/tables',
+                    permission: 'table.view',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18M10 10V4m0 16V14M14 10V4m0 16V14" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: 'Waiter View', to: '/operations/waiter',
+                    permission: 'table.view',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: 'Cashier', to: '/operations/cashier',
+                    permission: 'pos.access',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: 'Shifts', to: '/operations/shifts',
+                    permission: 'shift.view',
+                    icon: (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    ),
+                  },
+                ]
+                  .filter(item => hasPermission(item.permission))
+                  .map(item => (
+                    <li key={item.to}>
+                      <NavLink
+                        to={item.to}
+                        end={item.to === '/operations'}
                         onClick={() => setSidebarOpen(false)}
                         className={({ isActive }) =>
                           cn(
