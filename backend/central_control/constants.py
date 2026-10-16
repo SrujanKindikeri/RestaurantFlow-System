@@ -162,6 +162,13 @@ ALERT_TYPE_CHOICES = [
     (ALERT_TYPE_SYSTEM_HEALTH,        "System Health"),
     (ALERT_TYPE_DATA_INTEGRITY,       "Data Integrity"),
     (ALERT_TYPE_UNUSUAL_ACTIVITY,     "Unusual Activity"),
+    # Phase 20 — Enterprise Operations
+    ("BRANCH_CLOSED",                 "Branch Closed"),
+    ("BRANCH_NOT_OPENED",             "Branch Not Opened"),
+    ("CONFIGURATION_EXCEPTION",       "Configuration Exception"),
+    ("ROLLOUT_FAILED",                "Rollout Failed"),
+    ("ROLLOUT_PARTIAL_FAILURE",       "Rollout Partial Failure"),
+    ("STAFF_TRANSFER_EXCEPTION",      "Staff Transfer Exception"),
 ]
 
 # Alert types that represent stock-condition alerts (auto-resolve when stock changes)

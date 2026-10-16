@@ -128,6 +128,16 @@ NOTIFICATION_TYPE_CHOICES = [
     ("CRM_REWARD_EXPIRING",       "Reward Expiring"),
     ("CRM_FEEDBACK_SUBMITTED",    "Customer Feedback Submitted"),
     ("CRM_FEEDBACK_RESPONSE",     "Customer Feedback Response"),
+    # Phase 20 — Enterprise Operations
+    ("ENTERPRISE_BRANCH_CLOSURE_APPROVED",  "Branch Closure Approved"),
+    ("ENTERPRISE_BRANCH_REOPENED",          "Branch Reopened"),
+    ("ENTERPRISE_ROLLOUT_COMPLETED",        "Menu Rollout Completed"),
+    ("ENTERPRISE_ROLLOUT_FAILED",           "Menu Rollout Failed"),
+    ("ENTERPRISE_PRICE_ROLLOUT_COMPLETED",  "Price Rollout Completed"),
+    ("ENTERPRISE_STAFF_TRANSFER_APPROVED",  "Staff Transfer Approved"),
+    ("ENTERPRISE_STAFF_TRANSFER_REJECTED",  "Staff Transfer Rejected"),
+    ("ENTERPRISE_CONFIG_APPROVAL_REQUIRED", "Configuration Approval Required"),
+    ("ENTERPRISE_CONFIG_HIGH_IMPACT_CHANGED", "High-Impact Configuration Changed"),
 ]
 
 # ---------------------------------------------------------------------------

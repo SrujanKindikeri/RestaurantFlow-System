@@ -73,6 +73,8 @@ LOCAL_APPS = [
     "marketing",
     # Phase 19 — Advanced POS & Restaurant Operations
     "operations",
+    # Phase 20 — Multi-Branch Enterprise Operations & Configuration
+    "enterprise",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

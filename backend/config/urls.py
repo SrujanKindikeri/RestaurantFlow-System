@@ -35,6 +35,8 @@ urlpatterns = [
     path("api/", include("marketing.urls")),
     # Phase 19 — Advanced POS & Restaurant Operations
     path("api/", include("operations.urls")),
+    # Phase 20 — Multi-Branch Enterprise Operations & Configuration
+    path("api/", include("enterprise.urls")),
 ]
 
 # Serve media files in development

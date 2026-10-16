@@ -105,6 +105,16 @@ import { CashierPage } from '@/pages/operations/CashierPage'
 import { ShiftsPage } from '@/pages/operations/ShiftsPage'
 import { ShiftDetailPage } from '@/pages/operations/ShiftDetailPage'
 
+// Phase 20 — Multi-Branch Enterprise Operations & Configuration
+import { EnterpriseDashboard } from '@/pages/enterprise/EnterpriseDashboard'
+import { EnterpriseBranchesPage } from '@/pages/enterprise/EnterpriseBranchesPage'
+import { EnterpriseBranchDetailPage } from '@/pages/enterprise/EnterpriseBranchDetailPage'
+import { EnterpriseConfigurationPage } from '@/pages/enterprise/EnterpriseConfigurationPage'
+import { EnterpriseRolloutsPage } from '@/pages/enterprise/EnterpriseRolloutsPage'
+import { EnterpriseStaffPage } from '@/pages/enterprise/EnterpriseStaffPage'
+import { EnterpriseApprovalPoliciesPage } from '@/pages/enterprise/EnterpriseApprovalPoliciesPage'
+import { EnterpriseAuditPage } from '@/pages/enterprise/EnterpriseAuditPage'
+
 // Phase 17 — CRM, Loyalty & Feedback
 import { CustomerListPage } from '@/pages/crm/CustomerListPage'
 import { CustomerDetailPage } from '@/pages/crm/CustomerDetailPage'
@@ -305,6 +315,16 @@ function App() {
           <Route path="/operations/cashier" element={<CashierPage />} />
           <Route path="/operations/shifts" element={<ShiftsPage />} />
           <Route path="/operations/shifts/:id" element={<ShiftDetailPage />} />
+
+          {/* Phase 20 — Enterprise Operations */}
+          <Route path="/enterprise" element={<EnterpriseDashboard />} />
+          <Route path="/enterprise/branches" element={<EnterpriseBranchesPage />} />
+          <Route path="/enterprise/branches/:id" element={<EnterpriseBranchDetailPage />} />
+          <Route path="/enterprise/configuration" element={<EnterpriseConfigurationPage />} />
+          <Route path="/enterprise/rollouts" element={<EnterpriseRolloutsPage />} />
+          <Route path="/enterprise/staff" element={<EnterpriseStaffPage />} />
+          <Route path="/enterprise/approval-policies" element={<EnterpriseApprovalPoliciesPage />} />
+          <Route path="/enterprise/audit" element={<EnterpriseAuditPage />} />
         </Route>
       </Route>
 
