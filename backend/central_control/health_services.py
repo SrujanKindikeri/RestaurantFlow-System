@@ -70,7 +70,6 @@ class RestaurantHealthService:
             SEVERITY_CRITICAL, SEVERITY_HIGH,
         )
         from billing.models import Bill, BillStatus
-        from orders.models import Order
         from django.db.models import Count, Sum, Q
         from decimal import Decimal
 

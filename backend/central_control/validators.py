@@ -9,8 +9,6 @@ from django.core.exceptions import ValidationError
 from central_control.constants import (
     ALERT_VALID_TRANSITIONS,
     ISSUE_VALID_TRANSITIONS,
-    ALERT_STATUS_CHOICES,
-    ISSUE_STATUS_CHOICES,
     ISSUE_SEVERITY_CRITICAL,
 )
 
@@ -18,37 +16,35 @@ from central_control.constants import (
 def validate_alert_transition(current_status: str, new_status: str) -> None:
     """
     Validate that the given alert status transition is allowed.
-    Raises ValidationError if invalid.
+    Raises AlertTransitionError (domain exception) — NOT Django ValidationError —
+    so callers in services.py can catch it precisely.
     """
+    from central_control.exceptions import AlertTransitionError
     allowed = ALERT_VALID_TRANSITIONS.get(current_status, [])
     if new_status not in allowed:
-        raise ValidationError(
-            f"Cannot transition alert from '{current_status}' to '{new_status}'. "
-            f"Allowed transitions: {allowed or 'none (terminal state)'}."
-        )
+        raise AlertTransitionError(current_status, new_status)
 
 
 def validate_issue_transition(current_status: str, new_status: str) -> None:
     """
     Validate that the given issue status transition is allowed.
-    Raises ValidationError if invalid.
+    Raises IssueTransitionError (domain exception).
     """
+    from central_control.exceptions import IssueTransitionError
     allowed = ISSUE_VALID_TRANSITIONS.get(current_status, [])
     if new_status not in allowed:
-        raise ValidationError(
-            f"Cannot transition issue from '{current_status}' to '{new_status}'. "
-            f"Allowed transitions: {allowed or 'none (terminal state)'}."
-        )
+        raise IssueTransitionError(current_status, new_status)
 
 
 def validate_resolution_note_for_critical(severity: str, resolution_note: str) -> None:
     """
     Critical issues must include a non-empty resolution note.
-    Raises ValidationError if the condition is violated.
+    Raises ResolutionNoteRequiredError.
     """
     if severity == ISSUE_SEVERITY_CRITICAL:
         if not resolution_note or not resolution_note.strip():
-            raise ValidationError(
+            from central_control.exceptions import ResolutionNoteRequiredError
+            raise ResolutionNoteRequiredError(
                 "A resolution note is required when resolving or closing a CRITICAL issue."
             )
 
