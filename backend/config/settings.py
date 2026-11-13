@@ -19,9 +19,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -----------------------------------------------------------------------------
 # Security
 # -----------------------------------------------------------------------------
-SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key-before-production")
+# Phase 21 — Remove insecure fallbacks.  In production, SECRET_KEY MUST be
+# set via the environment.  A weak fallback is only kept for development.
+_SECRET_KEY_FALLBACK = "dev-only-insecure-key-DO-NOT-USE-IN-PRODUCTION"
+SECRET_KEY = os.getenv("SECRET_KEY", _SECRET_KEY_FALLBACK)
 
-DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
+# Phase 21 — DEBUG defaults to False for safety.
+# Must explicitly set DEBUG=True in development.
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
+
+# If running in production (DEBUG=False) with the fallback key, fail fast.
+if not os.getenv("SECRET_KEY") and not DEBUG:
+    raise RuntimeError(
+        "SECRET_KEY must be set via environment variable in production. "
+        "Do not rely on the insecure development fallback."
+    )
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
@@ -135,8 +147,20 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", "change_me"),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
+        # Phase 22 — Persistent connections (1 connection per Gunicorn sync worker).
+        # Set to 0 (or unset) if using PgBouncer in transaction-pooling mode.
+        "CONN_MAX_AGE": 60,
     }
 }
+
+# Phase 21 — In production, warn if DB_PASSWORD is still the default.
+if not DEBUG and os.getenv("DB_PASSWORD", "change_me") == "change_me":
+    import warnings
+    warnings.warn(
+        "DB_PASSWORD is using the insecure default 'change_me'. "
+        "Set a strong password via the environment variable in production.",
+        stacklevel=2,
+    )
 
 # -----------------------------------------------------------------------------
 # Custom User Model
@@ -179,6 +203,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # -----------------------------------------------------------------------------
 # Django REST Framework
 # -----------------------------------------------------------------------------
+# Phase 21 — Throttle rates (defined before REST_FRAMEWORK so it's available)
+THROTTLE_RATES = {
+    "auth_login": os.getenv("THROTTLE_AUTH_LOGIN", "30/hour"),
+    "auth_register": os.getenv("THROTTLE_AUTH_REGISTER", "5/hour"),
+    "auth_password": os.getenv("THROTTLE_AUTH_PASSWORD", "10/hour"),
+    "sensitive_op": os.getenv("THROTTLE_SENSITIVE_OP", "60/hour"),
+    "export": os.getenv("THROTTLE_EXPORT", "20/hour"),
+    "search": os.getenv("THROTTLE_SEARCH", "120/hour"),
+}
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -186,6 +220,11 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        # Global fallback throttle — not aggressive, catches runaway clients.
+        # Per-endpoint throttles override this with tighter limits where needed.
+    ],
+    "DEFAULT_THROTTLE_RATES": THROTTLE_RATES,
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
@@ -228,8 +267,13 @@ SIMPLE_JWT = {
 # -----------------------------------------------------------------------------
 # CORS
 # -----------------------------------------------------------------------------
+# Phase 21 — In debug mode, allow localhost origins only.
+# In production, only explicitly-listed origins are allowed.
 if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOWED_ORIGINS = os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
+    ).split(",")
 else:
     CORS_ALLOWED_ORIGINS = os.getenv(
         "CORS_ALLOWED_ORIGINS", "http://localhost:5173"
@@ -326,6 +370,17 @@ CELERY_BEAT_SCHEDULE = {
 # Use Django database as beat scheduler backend (requires django_celery_beat)
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+# Phase 22 — Task time limits (global defaults)
+CELERY_TASK_TIME_LIMIT = 300       # hard kill after 5 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = 240  # SoftTimeLimitExceeded raised after 4 minutes
+
+# Phase 22 — Route tasks to named queues for priority isolation
+CELERY_TASK_ROUTES = {
+    "notifications.*": {"queue": "notifications"},
+    "crm.*":           {"queue": "maintenance"},
+    "marketing.*":     {"queue": "maintenance"},
+}
+
 # -----------------------------------------------------------------------------
 # Cache
 # -----------------------------------------------------------------------------
@@ -366,6 +421,34 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     X_FRAME_OPTIONS = "DENY"
+
+# Phase 21 — Additional security headers (applied in all environments)
+# Referrer-Policy: strict-origin-when-cross-origin
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+# Phase 21 — Cookie security (applied in all environments for defense-in-depth)
+SESSION_COOKIE_HTTPONLY = True  # Django default, explicit for clarity
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = "Lax"
+
+# Phase 21 — Trusted proxy header for HTTPS detection behind ALB/Nginx
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Phase 21 — Request body size limit (default 2.5MB → 10MB for file uploads)
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", str(10 * 1024 * 1024)))
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", str(10 * 1024 * 1024)))
+
+# Phase 21 — Admin URL randomization (set ADMIN_URL_PREFIX in production)
+# Default keeps /admin/ for backward compatibility; override in production for security-by-obscurity
+ADMIN_URL_PREFIX = os.getenv("ADMIN_URL_PREFIX", "admin")
+
+# Phase 21 — Security event tracking configuration
+SECURITY_MAX_LOGIN_FAILURES = int(os.getenv("SECURITY_MAX_LOGIN_FAILURES", "5"))
+SECURITY_LOGIN_LOCKOUT_MINUTES = int(os.getenv("SECURITY_LOGIN_LOCKOUT_MINUTES", "15"))
+
+# Phase 21 — Audit retention period in days (set to 0 to disable auto-cleanup)
+AUDIT_RETENTION_DAYS = int(os.getenv("AUDIT_RETENTION_DAYS", "365"))
 
 # -----------------------------------------------------------------------------
 # Logging

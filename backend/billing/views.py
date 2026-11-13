@@ -117,6 +117,8 @@ def _get_bill_or_404(user, pk):
             "branch", "branch__restaurant", "branch__restaurant__organization",
             "branch__restaurant__settings",
             "created_by", "finalized_by", "cancelled_by",
+        ).prefetch_related(
+            "items__menu_item", "items__order_item",
         ).get(pk=pk)
     except Bill.DoesNotExist:
         raise NotFound(f"Bill {pk} not found.")
@@ -174,7 +176,7 @@ class BillListView(generics.ListAPIView):
 
     def get_queryset(self):
         qs = bill_acl.get_accessible_bills(self.request.user).select_related(
-            "order", "branch", "branch__restaurant",
+            "order", "order__branch", "branch", "branch__restaurant",
             "created_by", "finalized_by",
         )
 
