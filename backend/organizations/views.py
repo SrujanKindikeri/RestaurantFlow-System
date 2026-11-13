@@ -94,8 +94,8 @@ def get_restaurant_queryset(request=None, organization_id=None):
     organization_id — optional additional filter (for nested URL patterns).
     """
     base_qs = Restaurant.objects.annotate(
-        branch_count=Count("branches"),
-        active_branch_count=Count("branches", filter=Q(branches__is_active=True)),
+        branch_count_annotated=Count("branches"),
+        active_branch_count_annotated=Count("branches", filter=Q(branches__is_active=True)),
     )
 
     if organization_id:

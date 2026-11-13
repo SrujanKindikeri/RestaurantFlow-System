@@ -312,7 +312,7 @@ class TableSessionListView(generics.ListAPIView):
             qs = qs.filter(table__branch_id=branch_id)
         if status_f:
             qs = qs.filter(status=status_f.upper())
-        return qs
+        return qs.select_related('table__branch', 'opened_by')
 
 
 class TableSessionDetailView(generics.RetrieveAPIView):
@@ -409,7 +409,9 @@ class OrderListCreateView(generics.ListCreateAPIView):
         if date:
             qs = qs.filter(created_at__date=date)
 
-        return qs.prefetch_related("items")
+        return qs.select_related(
+            'branch', 'created_by', 'assigned_waiter', 'table', 'counter'
+        ).prefetch_related("items")
 
     def create(self, request, *args, **kwargs):
         serializer = CreateOrderSerializer(data=request.data)
@@ -513,6 +515,8 @@ class OrderDetailView(generics.RetrieveUpdateAPIView):
     def get_queryset(self):
         return order_acl.get_accessible_orders(
             self.request.user
+        ).select_related(
+            'branch', 'created_by', 'assigned_waiter', 'table', 'counter'
         ).prefetch_related("items__menu_item")
 
     def get_object(self):

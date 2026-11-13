@@ -652,6 +652,11 @@ class MenuRollout(TimestampedModel):
             models.Index(fields=["restaurant", "status"]),
             models.Index(fields=["restaurant", "menu_item", "status"]),
             models.Index(fields=["status", "effective_from"]),
+            # Phase 22 performance indexes
+            models.Index(
+                fields=["restaurant", "status", "created_at"],
+                name="ent_rollout_rest_stat_crtd_idx",
+            ),
         ]
 
     def __str__(self):
@@ -805,6 +810,11 @@ class StaffBranchAssignment(TimestampedModel):
             models.Index(fields=["branch", "is_active"]),
             models.Index(fields=["restaurant", "is_active"]),
             models.Index(fields=["user", "is_primary", "is_active"]),
+            # Phase 22 performance indexes
+            models.Index(
+                fields=["user", "branch", "is_active"],
+                name="ent_staffassign_usr_br_act_idx",
+            ),
         ]
 
     def __str__(self):

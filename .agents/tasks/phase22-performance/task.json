@@ -1,0 +1,7 @@
+{
+  "task_id": "task-phase22-performance",
+  "task_description": "Phase 22 — Performance, Caching & Scalability Engineering for RestaurantFlow. Implement database query optimization, database indexing, Redis caching architecture, cache invalidation, API response optimization, frontend performance, background task optimization, WebSocket scalability, concurrent transaction safeguards, load testing infrastructure, and all required documentation.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null
+}

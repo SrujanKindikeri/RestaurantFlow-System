@@ -15,7 +15,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from accounts import access as acl
-from .models import UserProfile, Role, Permission, UserRoleAssignment
+from .models import UserProfile, Role, Permission, UserRoleAssignment, SecurityAuditLog
 
 logger = logging.getLogger("accounts")
 User = get_user_model()
@@ -464,3 +464,80 @@ class UserCreateSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         UserProfile.objects.get_or_create(user=user)
         return user
+
+
+# =============================================================================
+# Phase 21 — Password Change Serializer
+# =============================================================================
+
+class PasswordChangeSerializer(serializers.Serializer):
+    """Serializer for password change requests.
+
+    Requires the old password for verification and validates the new
+    password against Django's AUTH_PASSWORD_VALIDATORS.
+    """
+
+    old_password = serializers.CharField(
+        write_only=True,
+        style={"input_type": "password"},
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        style={"input_type": "password"},
+    )
+    new_password_confirm = serializers.CharField(
+        write_only=True,
+        style={"input_type": "password"},
+    )
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password_confirm"]:
+            raise serializers.ValidationError(
+                {"new_password": "New passwords do not match."}
+            )
+        if attrs["new_password"] == attrs["old_password"]:
+            raise serializers.ValidationError(
+                {"new_password": "New password must differ from the current password."}
+            )
+        return attrs
+
+
+# =============================================================================
+# Phase 21 — Security Audit Log Serializer
+# =============================================================================
+
+class SecurityAuditLogSerializer(serializers.ModelSerializer):
+    """Read-only serializer for security audit log entries."""
+
+    actor_email = serializers.CharField(source="actor.email", read_only=True, default=None)
+    target_user_email = serializers.CharField(
+        source="target_user.email", read_only=True, default=None
+    )
+    organization_name = serializers.CharField(
+        source="organization.name", read_only=True, default=None
+    )
+
+    class Meta:
+        model = SecurityAuditLog
+        fields = [
+            "id",
+            "event",
+            "actor",
+            "actor_email",
+            "target_user",
+            "target_user_email",
+            "organization",
+            "organization_name",
+            "outcome",
+            "ip_address",
+            "user_agent",
+            "request_id",
+            "metadata",
+            "created_at",
+        ]
+        read_only_fields = fields

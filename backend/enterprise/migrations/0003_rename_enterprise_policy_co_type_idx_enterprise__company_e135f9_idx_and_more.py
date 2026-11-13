@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('organizations', '0002_rename_branch_rest_active_idx_organizatio_restaur_77d6a6_idx_and_more'),
         ('accounts', '0003_alter_user_managers_and_more'),
-        ('enterprise', '0001_initial'),
+        ('enterprise', '0002_performance_indexes'),
     ]
 
     operations = [

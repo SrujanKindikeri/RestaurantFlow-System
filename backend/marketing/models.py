@@ -220,6 +220,15 @@ class MarketingCampaign(TimestampedModel):
             models.Index(fields=["status", "start_at"]),
             models.Index(fields=["status", "end_at"]),
             models.Index(fields=["company", "start_at", "end_at"]),
+            # Phase 22 performance indexes
+            models.Index(
+                fields=["restaurant", "status", "start_at"],
+                name="mktg_camp_rest_stat_start_idx",
+            ),
+            models.Index(
+                fields=["restaurant", "status", "end_at"],
+                name="mktg_camp_rest_stat_end_idx",
+            ),
         ]
 
     def __str__(self):

@@ -46,7 +46,7 @@
 # =============================================================================
 
 import logging
-from decimal import Decimal, IntegrityError as DecimalIntegrityError
+from decimal import Decimal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.db import transaction, IntegrityError

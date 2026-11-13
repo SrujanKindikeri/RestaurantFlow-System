@@ -118,6 +118,8 @@ PERMISSIONS = [
     # Phase 4 — Shifts
     {"code": "shift.view",   "name": "View Shifts",   "module": "shift", "action": "view"},
     {"code": "shift.manage", "name": "Manage Shifts", "module": "shift", "action": "manage"},
+    # Phase 21 — Security
+    {"code": "security.audit.view", "name": "View Security Audit Log", "module": "security", "action": "audit.view"},
 ]
 
 
@@ -139,6 +141,7 @@ ROLES = [
             "user.view", "user.create", "user.update", "user.disable",
             "role.view", "role.manage",
             "permission.view",
+            "security.audit.view",
             "expense.view", "expense.create", "expense.approve",
             "report.sales.view", "report.accounts.view", "report.profit.view",
             "issue.view", "issue.create", "issue.resolve",
@@ -163,6 +166,7 @@ ROLES = [
             "user.view", "user.create", "user.update", "user.disable",
             "role.view", "role.manage",
             "permission.view",
+            "security.audit.view",
             "issue.view", "issue.create", "issue.resolve",
             # Phase 4 — Counters
             "counter.view", "counter.create", "counter.update", "counter.disable",

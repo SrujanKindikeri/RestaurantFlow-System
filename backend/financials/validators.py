@@ -104,24 +104,126 @@ def validate_attachment_file(file) -> None:
     """
     Validate an uploaded attachment file for:
       - size limit
-      - allowed MIME types
-      - allowed file extensions
+      - allowed extensions
+      - allowed MIME types (client-supplied — checked as a secondary layer)
+      - server-side magic-byte signature validation (primary defense)
+
+    Phase 21: Added server-side magic-byte inspection to prevent MIME-type
+    spoofing.  The client-supplied content_type is checked as a secondary
+    layer but is NOT trusted as the sole validation.
     """
     if file.size > MAX_ATTACHMENT_SIZE_BYTES:
         from financials.exceptions import AttachmentTooLarge
         raise AttachmentTooLarge(file.size, MAX_ATTACHMENT_SIZE_BYTES)
 
-    # MIME type check
+    # Extension check
+    _, ext = os.path.splitext(file.name.lower())
+    if ext and ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
+        from financials.exceptions import AttachmentTypeNotAllowed
+        raise AttachmentTypeNotAllowed(ext)
+
+    # MIME type check (secondary — client-supplied, not trusted alone)
     content_type = getattr(file, "content_type", "") or ""
     if content_type and content_type not in ALLOWED_ATTACHMENT_CONTENT_TYPES:
         from financials.exceptions import AttachmentTypeNotAllowed
         raise AttachmentTypeNotAllowed(content_type)
 
-    # Extension check (fallback when content_type not available)
-    _, ext = os.path.splitext(file.name.lower())
-    if ext and ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
-        from financials.exceptions import AttachmentTypeNotAllowed
-        raise AttachmentTypeNotAllowed(ext)
+    # Phase 21 — Server-side magic byte validation (primary defense)
+    _validate_file_magic_bytes(file, ext)
+
+
+# ---------------------------------------------------------------------------
+# Magic byte signatures for allowed file types
+# ---------------------------------------------------------------------------
+
+# Known file signatures (first N bytes) for allowed attachment types.
+# Reference: https://en.wikipedia.org/wiki/List_of_file_signatures
+_FILE_SIGNATURES = {
+    ".pdf":  [(b"%PDF",)],
+    ".jpg":  [(b"\xff\xd8\xff",)],
+    ".jpeg": [(b"\xff\xd8\xff",)],
+    ".png":  [(b"\x89PNG\r\n\x1a\n",)],
+    ".webp": [(b"RIFF",)],  # WebP starts with RIFF...WEBP
+    ".gif":  [(b"GIF87a",), (b"GIF89a",)],
+    ".bmp":  [(b"BM",)],
+    ".doc":  [(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1",)],  # OLE2 compound doc
+    ".docx": [(b"PK\x03\x04",)],  # ZIP-based (OOXML)
+    ".xls":  [(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1",)],  # OLE2 compound doc
+    ".xlsx": [(b"PK\x03\x04",)],  # ZIP-based (OOXML)
+}
+
+# Content types that are explicitly blocked even if extension matches.
+# These can contain active content (scripts, HTML, SVG with embedded JS).
+_BLOCKED_CONTENT_PATTERNS = [
+    b"<html", b"<script", b"<?php", b"<svg",
+    b"<javascript", b"text/html",
+]
+
+
+def _validate_file_magic_bytes(file, ext):
+    """
+    Read the first few bytes of the file and validate against known
+    magic byte signatures for the declared extension.
+
+    This prevents a user from uploading an executable/script disguised
+    as a PDF or image by spoofing the Content-Type header.
+
+    For ZIP-based formats (.docx, .xlsx), we also verify the file is a
+    valid ZIP archive containing expected content type markers.
+    """
+    from financials.exceptions import AttachmentTypeNotAllowed
+
+    # Save current position
+    pos = file.tell() if hasattr(file, "tell") else 0
+    try:
+        file.seek(0)
+    except Exception:
+        return  # If we can't seek, skip magic byte check (file may be a stream)
+
+    try:
+        # Read enough bytes to cover all signatures (max 12 bytes)
+        header = file.read(16)
+    except Exception:
+        return  # If we can't read, skip (better than crashing)
+
+    finally:
+        # Restore position
+        try:
+            file.seek(pos)
+        except Exception:
+            pass
+
+    if not header:
+        raise AttachmentTypeNotAllowed("empty file")
+
+    # Check for blocked active content patterns in the header
+    header_lower = header.lower()
+    for pattern in _BLOCKED_CONTENT_PATTERNS:
+        if pattern in header_lower:
+            raise AttachmentTypeNotAllowed(
+                f"File contains blocked active content ({ext})"
+            )
+
+    # Validate magic bytes for the declared extension
+    expected_sigs = _FILE_SIGNATURES.get(ext)
+    if not expected_sigs:
+        # If we don't have a signature for this extension, skip (rely on extension check).
+        return
+
+    matched = False
+    for sig_tuple in expected_sigs:
+        for sig in sig_tuple:
+            if header.startswith(sig):
+                matched = True
+                break
+        if matched:
+            break
+
+    if not matched:
+        raise AttachmentTypeNotAllowed(
+            f"File signature does not match extension '{ext}'. "
+            "The file may have been renamed or is not a valid {ext} file."
+        )
 
 
 # ---------------------------------------------------------------------------

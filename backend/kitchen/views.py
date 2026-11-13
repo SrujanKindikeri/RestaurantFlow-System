@@ -170,7 +170,9 @@ class KitchenOrderListView(generics.ListAPIView):
             # Default: priority desc (URGENT first) then oldest first
             qs = qs.order_by("-priority", "received_at")
 
-        return qs
+        return qs.select_related(
+            'order__branch', 'order__table', 'order__counter'
+        ).prefetch_related('items__menu_item')
 
 
 # =============================================================================
@@ -439,7 +441,9 @@ class KitchenHistoryView(generics.ListAPIView):
         else:
             qs = qs.order_by("-received_at")
 
-        return qs
+        return qs.select_related(
+            'order__branch', 'order__table', 'order__counter'
+        ).prefetch_related('items__menu_item')
 
 
 # =============================================================================

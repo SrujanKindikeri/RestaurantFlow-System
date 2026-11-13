@@ -1,0 +1,47 @@
+{
+  "id": "FEAT-005",
+  "type": "chore",
+  "description": "Load testing infrastructure, remaining documentation (load_testing.md), bulk operation review, and final validation/commit. Builds on FEAT-001 through FEAT-004 work but the load testing files themselves are independent and can be written first. Depends logically on all prior FEATs being complete before final validation and commit.",
+  "status": "pending",
+  "steps": [
+    "1. Augment performance/locustfile.py (file already exists in performance/). Read the existing file first. Add or extend with the following Locust user classes if not already present: (a) MenuBrowseUser — tasks: GET /api/menu/branches/{branch_id}/catalog/ (weight 3), GET /api/menu/items/ with pagination (weight 2). (b) OrderLifecycleUser — tasks: POST /api/orders/ (create order), POST /api/orders/{id}/items/ (add item), POST /api/orders/{id}/confirm/ (confirm order). (c) KitchenDisplayUser — tasks: WebSocket connect to ws://host/ws/kitchen/{branch_id}/?token={jwt}, send ping every 10s, receive kitchen.event. (d) BillingUser — tasks: POST /api/billing/bills/from-order/{order_id}/, POST /api/billing/bills/{id}/finalize/. (e) PaymentUser — tasks: POST /api/payments/, POST /api/billing/bills/{id}/finalize/ (prerequisite fulfilled by setup). (f) InventoryDashboardUser — GET /api/inventory/dashboard/?branch={branch_id}. (g) ReportingUser — GET /api/reporting/dashboard/, GET /api/reporting/sales/summary/?date_from={from}&date_to={to}. (h) NotificationsUser — GET /api/notifications/?unread=true, WebSocket connect to ws://host/ws/notifications/?token={jwt}. (i) EnterpriseDashboardUser — GET /api/enterprise/dashboard/. Add a @events.init.add_listener that reads test users + JWTs from performance/test_data/users.json (created in a later step).",
+
+    "2. Create performance/scenarios/ directory (may already exist). Write individual scenario files: (a) performance/scenarios/pos_checkout.py — simulates full POS checkout: login → GET catalog → POST order → add items → confirm → create bill → finalize → process payment. (b) performance/scenarios/kitchen_ws.py — simulates 20 concurrent kitchen display clients holding WebSocket connections for 60s. (c) performance/scenarios/concurrent_payments.py — simulates 10 concurrent cashiers each paying different bills simultaneously (tests for no overpayment). (d) performance/scenarios/multi_branch.py — simulates 5 restaurants × 3 branches = 15 concurrent branch-level order streams.",
+
+    "3. Create performance/test_data/ seed scripts. Create performance/test_data/seed_test_data.py — a standalone Django management command or script that creates: 1 Company, 2 Restaurants, 3 Branches each, 10 Counter sessions, 50 Menu items with prices, 100 pre-confirmed orders (for billing/payment tests), 20 test users with JWT tokens. Script writes performance/test_data/users.json with user emails, hashed role info, and JWT tokens. Script must be idempotent (use get_or_create). Add a header comment: 'RUN IN TEST/STAGING ENVIRONMENT ONLY. Never run against production data.'",
+
+    "4. Update performance/README.md (file already exists). Add sections: (a) Prerequisites — installed locust, running backend, Redis, and Celery worker; seed test data with performance/test_data/seed_test_data.py. (b) Running load tests — 'locust -f performance/locustfile.py --host http://localhost:8000 --users 50 --spawn-rate 5'. (c) Running a specific scenario — 'locust -f performance/scenarios/pos_checkout.py'. (d) Performance targets from Phase 22 task brief (simple reads p95 <300ms, writes p95 <500ms, dashboard p95 <800ms). (e) What to measure: p50/p95/p99 response times per endpoint, DB query counts (enable Django SQL debug logger), Redis cache hit/miss ratio (use redis-cli INFO stats), Celery task queue depth. (f) Test data setup instructions. (g) Safety warnings: never run against production.",
+
+    "5. Review enterprise bulk operations in backend/enterprise/services.py and backend/enterprise/rollout_services.py. Find operations that create or update many records (menu rollouts applied to many branches, bulk staff assignments). Verify they use: (a) bulk_create() or bulk_update() with batch_size=500. (b) transaction.atomic() per batch. (c) Progress tracking via a counter that increments per batch (not per individual record). If any bulk loop uses individual .save() calls in a loop, refactor to bulk_create/bulk_update with controlled batches. Document findings in FEAT-005 findings.",
+
+    "6. Create docs/load_testing.md at repo root. Contents: (a) Load testing setup (Locust, test data). (b) Performance targets table from the task brief. (c) Interpreted results guide — how to read Locust output, how to identify slow endpoints, how to correlate with Django query counts and Redis stats. (d) Pre-load test checklist — ensure Redis is running, Celery worker is running, DEBUG=False in settings for accurate perf, database is seeded, connection pool is configured. (e) Reference to performance/README.md for execution commands.",
+
+    "7. Final validation — run all checks. Run: (a) python manage.py check (must return 0 errors). (b) python manage.py makemigrations --check (must return 'No changes detected'). (c) python manage.py test (all tests pass). (d) cd frontend && npm run build (no TS errors). (e) cd frontend && npm run lint (zero warnings). Record results in findings. If any check fails, fix it before proceeding to commit.",
+
+    "8. Git commit. Stage and commit all changes with message: 'perf: optimize database caching and application scalability'. Stage specific files in logical groups: migrations first, then backend Python files, then frontend files, then docs, then performance/. Command: git add backend/ frontend/ docs/ performance/ && git commit -m 'perf: optimize database caching and application scalability'. Do NOT push."
+  ],
+  "acceptance_criteria": [
+    "performance/locustfile.py has at least 6 user classes covering menu browse, order lifecycle, kitchen WebSocket, billing, payment, reporting",
+    "performance/scenarios/ contains at least 4 scenario files",
+    "performance/test_data/seed_test_data.py exists and is idempotent",
+    "performance/README.md updated with performance targets, setup, and execution instructions",
+    "docs/load_testing.md exists",
+    "Enterprise bulk operations use bulk_create/bulk_update with batch_size=500 and transaction.atomic()",
+    "python manage.py check returns zero errors",
+    "python manage.py makemigrations --check shows no pending migrations",
+    "python manage.py test passes all tests",
+    "cd frontend && npm run build succeeds",
+    "cd frontend && npm run lint returns zero warnings",
+    "git commit created with message 'perf: optimize database caching and application scalability'"
+  ],
+  "verification": [
+    "cd backend && python manage.py check",
+    "cd backend && python manage.py makemigrations --check",
+    "cd backend && python manage.py test",
+    "cd frontend && npm run build",
+    "cd frontend && npm run lint",
+    "git log --oneline -1 (shows the perf: commit)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

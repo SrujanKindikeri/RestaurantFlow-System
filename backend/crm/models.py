@@ -239,6 +239,11 @@ class Customer(TimestampedModel):
             models.Index(fields=["company", "phone"]),
             models.Index(fields=["restaurant", "phone"]),
             models.Index(fields=["restaurant", "email"]),
+            # Phase 22 performance indexes
+            models.Index(
+                fields=["restaurant", "is_active", "created_at"],
+                name="crm_cust_rest_active_crtd_idx",
+            ),
         ]
 
     def __str__(self):
@@ -304,7 +309,7 @@ class CustomerPreference(TimestampedModel):
         related_name="preferred_customers",
     )
     favorite_category = models.ForeignKey(
-        "menu.MenuCategory",
+        "menu.Category",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -733,6 +738,11 @@ class LoyaltyAccount(TimestampedModel):
         indexes = [
             models.Index(fields=["customer"]),
             models.Index(fields=["loyalty_program"]),
+            # Phase 22 performance indexes
+            models.Index(
+                fields=["loyalty_program", "points_balance"],
+                name="crm_loyalty_prog_balance_idx",
+            ),
         ]
 
     def __str__(self):

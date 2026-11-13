@@ -146,8 +146,16 @@ class RestaurantSerializer(serializers.ModelSerializer):
     """Flat Restaurant representation."""
 
     organization_name = serializers.CharField(source="organization.name", read_only=True)
-    branch_count = serializers.IntegerField(read_only=True)
-    active_branch_count = serializers.IntegerField(read_only=True)
+    # Phase 21 fix: use SerializerMethodField to avoid annotation/property name clash
+    branch_count = serializers.SerializerMethodField()
+    active_branch_count = serializers.SerializerMethodField()
+
+    def get_branch_count(self, obj):
+        # Use annotated value if available (faster), else fall back to property
+        return getattr(obj, "branch_count_annotated", None) or obj.branch_count
+
+    def get_active_branch_count(self, obj):
+        return getattr(obj, "active_branch_count_annotated", None) or obj.active_branch_count
 
     class Meta:
         model = Restaurant
@@ -176,8 +184,6 @@ class RestaurantSerializer(serializers.ModelSerializer):
             "id",
             "slug",
             "organization_name",
-            "branch_count",
-            "active_branch_count",
             "created_at",
             "updated_at",
         ]

@@ -82,14 +82,6 @@ class Migration(migrations.Migration):
             name='rewardredemption',
             options={'ordering': ['-created_at'], 'verbose_name': 'Reward Redemption', 'verbose_name_plural': 'Reward Redemptions'},
         ),
-        migrations.RemoveIndex(
-            model_name='customer',
-            name='crm_cust_rest_active_created_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='loyaltyaccount',
-            name='crm_loyalty_prog_balance_idx',
-        ),
         migrations.RenameIndex(
             model_name='customer',
             new_name='crm_custome_company_b1a7c0_idx',

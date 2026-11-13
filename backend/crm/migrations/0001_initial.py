@@ -110,7 +110,7 @@ class Migration(migrations.Migration):
                 ("customer", models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name="preference", to="crm.customer")),
                 ("restaurant", models.ForeignKey(db_index=True, on_delete=django.db.models.deletion.PROTECT, related_name="customer_preferences", to="organizations.restaurant")),
                 ("preferred_branch", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="preferred_customers", to="organizations.branch")),
-                ("favorite_category", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="+", to="menu.menucategory")),
+                ("favorite_category", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="+", to="menu.category")),
                 ("favorite_menu_item", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="+", to="menu.menuitem")),
             ],
             options={"verbose_name": "Customer Preference"},

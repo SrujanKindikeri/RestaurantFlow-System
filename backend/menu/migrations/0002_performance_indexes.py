@@ -5,6 +5,9 @@
 # Adds composite indexes that were missing from 0001_initial to accelerate
 # high-traffic menu catalog queries.
 #
+# Uses SeparateDatabaseAndState with CREATE INDEX CONCURRENTLY so that the
+# index builds without holding an exclusive table lock in production.
+#
 # All indexes added are verified as non-duplicate by reviewing 0001_initial.py.
 #
 # 0001 already declares as Meta.indexes (via CreateModel options):
@@ -22,6 +25,8 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
+    atomic = False  # required for CONCURRENTLY
+
     dependencies = [
         ("menu", "0001_initial"),
     ]
@@ -34,11 +39,27 @@ class Migration(migrations.Migration):
         # 0001 has individual db_index on is_available but no composite index
         # with branch for efficient branch-scoped catalog queries.
         # ----------------------------------------------------------------
-        migrations.AddIndex(
-            model_name="menuitembranch",
-            index=models.Index(
-                fields=["branch", "is_available"],
-                name="menu_avail_branch_available_idx",
-            ),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "CREATE INDEX CONCURRENTLY IF NOT EXISTS "
+                        "menu_avail_branch_available_idx "
+                        "ON menu_menuitembranch (branch_id, is_available);"
+                    ),
+                    reverse_sql=(
+                        "DROP INDEX CONCURRENTLY IF EXISTS menu_avail_branch_available_idx;"
+                    ),
+                ),
+            ],
+            state_operations=[
+                migrations.AddIndex(
+                    model_name="menuitembranch",
+                    index=models.Index(
+                        fields=["branch", "is_available"],
+                        name="menu_avail_branch_available_idx",
+                    ),
+                ),
+            ],
         ),
     ]

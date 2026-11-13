@@ -455,3 +455,158 @@ class UserRoleAssignment(TimestampedModel):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+# =============================================================================
+# Phase 21 — Security Audit Log
+# =============================================================================
+
+class SecurityAuditLog(TimestampedModel):
+    """
+    Immutable append-only audit trail for security-relevant events.
+
+    Covers authentication, authorization, account management, and security
+    events that span the entire platform.  Domain-specific audit logs
+    (FinancialAuditLog, AccountingAuditLog, etc.) continue to handle their
+    own narrower scopes.
+
+    Events recorded here include:
+        - login / login_failed / logout
+        - password_change / password_reset_request / password_reset_complete
+        - account_disabled / account_reactivated
+        - role_assigned / role_revoked
+        - permission_denied (repeated / suspicious)
+        - session_revoked
+        - security_alert
+
+    Rows cannot be updated or deleted after creation (save() guard).
+    """
+
+    # Event identifiers
+    EVENT_LOGIN = "login"
+    EVENT_LOGIN_FAILED = "login_failed"
+    EVENT_LOGOUT = "logout"
+    EVENT_PASSWORD_CHANGE = "password_change"
+    EVENT_PASSWORD_RESET_REQUEST = "password_reset_request"
+    EVENT_PASSWORD_RESET_COMPLETE = "password_reset_complete"
+    EVENT_ACCOUNT_DISABLED = "account_disabled"
+    EVENT_ACCOUNT_REACTIVATED = "account_reactivated"
+    EVENT_ROLE_ASSIGNED = "role_assigned"
+    EVENT_ROLE_REVOKED = "role_revoked"
+    EVENT_PERMISSION_DENIED = "permission_denied"
+    EVENT_SESSION_REVOKED = "session_revoked"
+    EVENT_SECURITY_ALERT = "security_alert"
+    EVENT_USER_REGISTERED = "user_registered"
+    EVENT_USER_CREATED = "user_created"
+    EVENT_LOGIN_LOCKOUT = "login_lockout"
+
+    EVENT_CHOICES = [
+        (EVENT_LOGIN, "Login"),
+        (EVENT_LOGIN_FAILED, "Login Failed"),
+        (EVENT_LOGOUT, "Logout"),
+        (EVENT_PASSWORD_CHANGE, "Password Change"),
+        (EVENT_PASSWORD_RESET_REQUEST, "Password Reset Requested"),
+        (EVENT_PASSWORD_RESET_COMPLETE, "Password Reset Completed"),
+        (EVENT_ACCOUNT_DISABLED, "Account Disabled"),
+        (EVENT_ACCOUNT_REACTIVATED, "Account Reactivated"),
+        (EVENT_ROLE_ASSIGNED, "Role Assigned"),
+        (EVENT_ROLE_REVOKED, "Role Revoked"),
+        (EVENT_PERMISSION_DENIED, "Permission Denied"),
+        (EVENT_SESSION_REVOKED, "Session Revoked"),
+        (EVENT_SECURITY_ALERT, "Security Alert"),
+        (EVENT_USER_REGISTERED, "User Registered"),
+        (EVENT_USER_CREATED, "User Created"),
+        (EVENT_LOGIN_LOCKOUT, "Login Lockout"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Who performed the action (nullable for pre-auth events like failed login)
+    actor = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.PROTECT,
+        related_name="security_audit_logs",
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    # The user affected by the action (may differ from actor — e.g. admin disabling a user)
+    target_user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.PROTECT,
+        related_name="security_audit_logs_as_target",
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    event = models.CharField(
+        max_length=40,
+        choices=EVENT_CHOICES,
+        db_index=True,
+    )
+
+    # Tenant scope
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="security_audit_logs",
+        db_index=True,
+    )
+
+    # Outcome
+    OUTCOME_SUCCESS = "success"
+    OUTCOME_FAILURE = "failure"
+    OUTCOME_CHOICES = [
+        (OUTCOME_SUCCESS, "Success"),
+        (OUTCOME_FAILURE, "Failure"),
+    ]
+    outcome = models.CharField(
+        max_length=10,
+        choices=OUTCOME_CHOICES,
+        default=OUTCOME_SUCCESS,
+        db_index=True,
+    )
+
+    # Request context
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    request_id = models.CharField(max_length=100, blank=True, db_index=True)
+
+    # Safe metadata (never store passwords, tokens, or secrets here)
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Safe, non-sensitive context: role code, permission code, reason, etc. "
+            "NEVER store passwords, tokens, session IDs, or secret keys."
+        ),
+    )
+
+    class Meta:
+        verbose_name = "Security Audit Log"
+        verbose_name_plural = "Security Audit Logs"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["event", "created_at"]),
+            models.Index(fields=["actor", "created_at"]),
+            models.Index(fields=["target_user", "created_at"]),
+            models.Index(fields=["organization", "created_at"]),
+            models.Index(fields=["outcome", "created_at"]),
+            models.Index(fields=["ip_address", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"SecurityAudit: {self.event} by {self.actor_id} at {self.created_at}"
+
+    def save(self, *args, **kwargs):
+        """Immutable: block updates to existing rows."""
+        if self.pk and SecurityAuditLog.objects.filter(pk=self.pk).exists():
+            raise ValueError(
+                "SecurityAuditLog records are immutable — "
+                "they cannot be updated after creation."
+            )
+        super().save(*args, **kwargs)

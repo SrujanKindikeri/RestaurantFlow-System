@@ -141,6 +141,18 @@ class Notification(TimestampedModel):
             models.Index(fields=["branch", "created_at"]),
             models.Index(fields=["source_type", "source_id"]),
             models.Index(fields=["notification_type", "source_type", "source_id"]),
+            models.Index(
+                fields=["company", "notification_type", "created_at"],
+                name="notif_co_type_created_idx",
+            ),
+            models.Index(
+                fields=["restaurant", "notification_type", "created_at"],
+                name="notif_rest_type_created_idx",
+            ),
+            models.Index(
+                fields=["branch", "notification_type", "created_at"],
+                name="notif_branch_type_created_idx",
+            ),
         ]
 
     def __str__(self):
@@ -207,6 +219,11 @@ class NotificationRecipient(TimestampedModel):
             models.Index(fields=["user", "notification"]),
             models.Index(fields=["notification", "delivery_status"]),
             models.Index(fields=["user", "read_at"]),
+            # Phase 22 performance indexes
+            models.Index(
+                fields=["user", "delivery_status", "created_at"],
+                name="notif_recip_usr_stat_crtd_idx",
+            ),
         ]
 
     def __str__(self):

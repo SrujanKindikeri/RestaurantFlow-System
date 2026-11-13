@@ -1,0 +1,48 @@
+{
+  "id": "FEAT-004",
+  "type": "test",
+  "description": "Concurrency safeguards, background task optimization, WebSocket payload optimization, and automated performance tests. Verify transaction.atomic() + select_for_update() in critical flows. Add Celery task idempotency. Write tests for N+1 prevention, cache behavior, concurrent payment safety. Independent of FEAT-001/002/003.",
+  "status": "pending",
+  "steps": [
+    "1. Audit critical financial flows for concurrency safety. Read these service files and verify transaction.atomic() + select_for_update() are present: (a) backend/payments/services.py — create_payment function must lock the bill with Bill.objects.select_for_update().get(pk=bill_id) inside transaction.atomic(). Verify payment.amount validation checks bill.remaining_amount inside the same transaction. (b) backend/billing/services.py — finalize_bill must lock the bill before setting status=FINALIZED. (c) backend/payments/services.py — process_refund must lock the payment with Payment.objects.select_for_update().get(pk=payment_id) before creating refund. (d) backend/inventory/services.py — deduct_stock (or equivalent) must lock StockBalance with select_for_update() before decrementing quantity. (e) backend/inventory/services.py — complete_stock_transfer must lock both source and destination StockBalance rows in deterministic order (order by pk) to prevent deadlock. If any of these lack select_for_update() or transaction.atomic(), add them. Document the fix in findings.",
+
+    "2. Audit Celery tasks for idempotency. Review backend/notifications/tasks.py, backend/crm/tasks.py, backend/marketing/tasks.py. Ensure: (a) deliver_notification_channel checks delivery.status at start and returns early if already terminal (DELIVERED, CANCELLED, NOT_CONFIGURED). (b) refresh_customer_statistics uses get_or_create or checks if the update is already applied. (c) expire_loyalty_points uses a date-keyed reference to prevent duplicate expiry transactions for the same account on the same day. If any task can create duplicate records on retry, add a guard. Document findings.",
+
+    "3. Add task timeouts and retry policies. In backend/config/settings.py, add CELERY_TASK_TIME_LIMIT=300 (5 min hard limit) and CELERY_TASK_SOFT_TIME_LIMIT=240 (4 min soft limit). Review each @shared_task decorator: (a) notifications.deliver_notification_channel — already has max_retries=3, default_retry_delay=60; this is acceptable. (b) crm.refresh_customer_statistics — set max_retries=3, default_retry_delay=30, time_limit=120. (c) crm.run_segmentation_for_restaurant — set max_retries=2, default_retry_delay=60, time_limit=600 (long-running). (d) marketing tasks (expire_campaigns, update_delivery_status, calculate_metrics) — set max_retries=3, default_retry_delay=30, time_limit=300. Add a default task base class in backend/config/celery.py: class SafeTask(Task): max_retries=3, default_retry_delay=60, time_limit=300. Use app.task(base=SafeTask, ...) for new tasks.",
+
+    "4. Optimize WebSocket event payloads. Review backend/kitchen/consumers.py _get_current_state() — it calls KitchenOrderListSerializer(qs, many=True).data. If the serializer includes verbose nested objects (full user profiles, full menu item details), create a minimal KitchenOrderSyncSerializer that returns only: order_number, status, priority, received_at, table_number, item_count, item_names_summary (comma-separated string of first 3 item names + '...'). Use this for the initial sync payload. The individual kitchen.event messages can remain detailed. Similarly review backend/central_control/consumers.py _build_sync_payload() — it returns alert/issue counts only (already minimal). Review backend/notifications/consumers.py _send_unread_count() — it returns a single integer (already optimal). No changes needed if payloads are already minimal.",
+
+    "5. Review WebSocket group scoping. Verify: (a) KitchenConsumer group = kitchen_{branch_id} (correct). (b) CentralControlConsumer group = company_{organization_id}_central_control (correct). (c) NotificationsConsumer group = notifications_user_{user_id} (correct). Ensure all consumers prevent unauthorized group joins by validating user access before self.channel_layer.group_add(). All three consumers already call _get_authorized_branch / _get_authorized_organization / user validation before group_add — confirmed secure. Document this in findings.",
+
+    "6. Write concurrency tests. Create backend/tests/test_concurrency.py (or backend/payments/tests/test_concurrency.py if app-level tests preferred). Test: (a) test_concurrent_payments_no_overpayment — spawn 2 threads that each call create_payment for the same bill with half the grand_total; assert only 1 succeeds or total paid ≤ grand_total. Use Django's TransactionTestCase (not TestCase) so each thread gets a real DB connection. (b) test_concurrent_inventory_deduction — spawn 2 threads that each deduct 60 units from a StockBalance with quantity=100; assert final quantity ≥ 0 and sum of deducted quantities ≤ 100. (c) test_concurrent_bill_finalization — spawn 2 threads calling finalize_bill on the same bill; assert only 1 succeeds (status=FINALIZED) and no duplicate journal entries. Use threading.Thread or multiprocessing.Process. Use Django's call_command('test', 'path.to.test_concurrency') to run these in isolation.",
+
+    "7. Write cache tests. Create backend/tests/test_cache.py or backend/common/tests/test_caching.py. Test: (a) test_cache_hit_miss — CacheService.set(key, value); assert CacheService.get(key) == value; CacheService.delete(key); assert CacheService.get(key) is None. (b) test_redis_failure_fallback — mock redis.exceptions.RedisError in CacheService.get; assert it returns None and logs warning. (c) test_cache_key_tenant_isolation — generate cache keys for two different branch_ids; assert keys are different. (d) test_invalidation_on_commit — create a MenuItem inside transaction.atomic(); assert menu catalog cache is invalidated only after commit (use transaction.on_commit callbacks). (e) test_get_secure_returns_sentinel_on_redis_failure — mock RedisError in get_secure; assert result is CACHE_MISS_SENTINEL.",
+
+    "8. Write N+1 query prevention tests. Create backend/tests/test_queries.py. Use django.test.utils.override_settings(DEBUG=True) and connection.queries to count queries. Test: (a) test_order_list_no_n_plus_1 — create 10 orders with items; call OrderListCreateView.get(); use assertNumQueries(ctx) where ctx.captured_queries length ≤ 5 (1 for orders with select_related, 1 for prefetch items, 1 for count, 1-2 for auth). (b) test_bill_list_no_n_plus_1 — create 10 bills; call list view; assert query count ≤ 4. (c) test_kitchen_consumer_sync_no_n_plus_1 — create 20 kitchen orders; call _get_current_state(); assert query count ≤ 6. If any test fails (query count exceeds expected), the select_related/prefetch_related fix from FEAT-001 is incomplete.",
+
+    "9. Write pagination enforcement tests. Create backend/tests/test_pagination.py. Test: (a) test_max_page_size_enforced — call an OrderListCreateView endpoint with ?page_size=500; assert response has at most 100 items and a warning header or pagination meta indicates capped size. (b) test_export_max_rows — call ExportCSVView with a filter that would return 15000 rows; assert HTTP 400 response with error message about exceeding MAX_EXPORT_ROWS.",
+
+    "10. Document all concurrency safeguards and test results in findings. List which flows were verified to have select_for_update, which tasks were verified idempotent, which WebSocket consumers were verified scoped correctly. This summary is included in the final FEAT-004 findings field for auditability."
+  ],
+  "acceptance_criteria": [
+    "backend/payments/services.py create_payment uses select_for_update() on Bill",
+    "backend/billing/services.py finalize_bill uses select_for_update() on Bill",
+    "backend/inventory/services.py stock deduction uses select_for_update() on StockBalance",
+    "All Celery tasks have max_retries and time_limit set explicitly or via base class",
+    "CELERY_TASK_TIME_LIMIT and CELERY_TASK_SOFT_TIME_LIMIT defined in settings.py",
+    "backend/tests/test_concurrency.py exists with at least 3 concurrent safety tests",
+    "backend/tests/test_cache.py exists with at least 5 cache behavior tests",
+    "backend/tests/test_queries.py exists with at least 3 N+1 prevention tests using assertNumQueries pattern",
+    "backend/tests/test_pagination.py exists with at least 2 pagination enforcement tests",
+    "All new tests pass when run with python manage.py test"
+  ],
+  "verification": [
+    "cd backend && python manage.py test tests.test_concurrency",
+    "cd backend && python manage.py test tests.test_cache",
+    "cd backend && python manage.py test tests.test_queries",
+    "cd backend && python manage.py test tests.test_pagination",
+    "cd backend && python manage.py test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

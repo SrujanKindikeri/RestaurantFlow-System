@@ -17,6 +17,8 @@ import logging
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
+from core.security import record_security_event, revoke_user_sessions
+
 logger = logging.getLogger("accounts")
 
 # ---------------------------------------------------------------------------
@@ -60,6 +62,12 @@ def create_user(actor, *, email, first_name, last_name, phone="", password, **ex
             user.email,
             actor.email,
         )
+        record_security_event(
+            event="user_created",
+            actor=actor,
+            target_user=user,
+            metadata={"email": user.email},
+        )
     return user
 
 
@@ -71,6 +79,9 @@ def disable_user(actor, user):
     """
     Soft-disable a user.  actor must have authority over the user.
     Superusers cannot be disabled via this service.
+
+    After disabling, all active JWT refresh tokens are revoked to prevent
+    continued access with a disabled account.
     """
     from accounts.access import can_manage_user
 
@@ -89,6 +100,17 @@ def disable_user(actor, user):
     user.is_active = False
     user.save(update_fields=["is_active", "updated_at"])
     logger.warning("User disabled: email=%s by actor=%s", user.email, actor.email)
+
+    # Revoke all active sessions for the disabled user
+    revoked_count = revoke_user_sessions(user)
+
+    record_security_event(
+        event="account_disabled",
+        actor=actor,
+        target_user=user,
+        metadata={"sessions_revoked": revoked_count},
+    )
+
     return user
 
 
@@ -105,6 +127,13 @@ def reactivate_user(actor, user):
     user.is_active = True
     user.save(update_fields=["is_active", "updated_at"])
     logger.info("User reactivated: email=%s by actor=%s", user.email, actor.email)
+
+    record_security_event(
+        event="account_reactivated",
+        actor=actor,
+        target_user=user,
+    )
+
     return user
 
 
@@ -154,6 +183,18 @@ def assign_role(actor, *, user, role, organization=None, restaurant=None, branch
         role.code,
         actor.email,
     )
+    record_security_event(
+        event="role_assigned",
+        actor=actor,
+        target_user=user,
+        metadata={
+            "role_code": role.code,
+            "organization_id": str(organization.pk) if organization else None,
+            "restaurant_id": str(restaurant.pk) if restaurant else None,
+            "branch_id": str(branch.pk) if branch else None,
+        },
+        organization=organization,
+    )
     return assignment
 
 
@@ -181,6 +222,16 @@ def remove_role_assignment(actor, assignment):
         assignment.user.email,
         assignment.role.code,
         actor.email,
+    )
+    record_security_event(
+        event="role_revoked",
+        actor=actor,
+        target_user=assignment.user,
+        metadata={
+            "role_code": assignment.role.code,
+            "assignment_id": str(assignment.pk),
+        },
+        organization=assignment.organization,
     )
     return assignment
 

@@ -8,8 +8,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    # Admin
-    path("admin/", admin.site.urls),
+    # Admin — URL prefix configurable via ADMIN_URL_PREFIX env var for
+    # security-by-obscurity in production (does not replace auth controls).
+    path(f"{settings.ADMIN_URL_PREFIX}/", admin.site.urls),
 
     # API v1
     path("api/", include("core.urls")),

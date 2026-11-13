@@ -36,7 +36,7 @@
 # =============================================================================
 
 import logging
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from django.db.models import Q
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -46,6 +46,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from accounts import access as acl
 from accounts import services
@@ -55,7 +56,19 @@ from accounts.permissions import (
     IsRestaurantAdmin,
     IsSelfOrAdmin,
 )
-from .models import Role, Permission, UserRoleAssignment, UserProfile
+from core.security import (
+    record_security_event,
+    record_login_failure,
+    is_login_locked_out,
+    clear_login_failures,
+    revoke_user_sessions,
+)
+from core.throttles import (
+    LoginRateThrottle,
+    RegistrationRateThrottle,
+    PasswordResetRateThrottle,
+)
+from .models import Role, Permission, UserRoleAssignment, UserProfile, SecurityAuditLog
 from .serializers import (
     UserSerializer,
     UserDetailSerializer,
@@ -66,6 +79,8 @@ from .serializers import (
     PermissionSerializer,
     UserRoleAssignmentSerializer,
     UserRoleAssignmentCreateSerializer,
+    PasswordChangeSerializer,
+    SecurityAuditLogSerializer,
 )
 
 logger = logging.getLogger("accounts")
@@ -80,14 +95,267 @@ class RegisterView(generics.CreateAPIView):
     """
     POST /api/auth/register/
     Public — create a new user account.
+
+    Rate-limited via RegistrationRateThrottle to prevent account-spam attacks.
     """
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
+    throttle_classes = [RegistrationRateThrottle]
 
     def perform_create(self, serializer):
         user = serializer.save()
         logger.info("New user registered: %s", user.email)
+        record_security_event(
+            event=SecurityAuditLog.EVENT_USER_REGISTERED,
+            actor=user,
+            target_user=user,
+            ip_address=self._get_client_ip(),
+            user_agent=self._get_user_agent(),
+            metadata={"email": user.email},
+        )
+
+    def _get_client_ip(self):
+        xff = self.request.META.get("HTTP_X_FORWARDED_FOR")
+        if xff:
+            return xff.split(",")[0].strip()
+        return self.request.META.get("REMOTE_ADDR")
+
+    def _get_user_agent(self):
+        return self.request.META.get("HTTP_USER_AGENT", "")
+
+
+class SecureLoginView(TokenObtainPairView):
+    """
+    POST /api/auth/login/
+
+    Custom login view that adds:
+    - Rate limiting (LoginRateThrottle)
+    - Login failure tracking with temporary lockout
+    - Audit logging for both successful and failed logins
+    - Generic error messages (user enumeration protection)
+    - Security event detection for repeated failures
+    """
+
+    throttle_classes = [LoginRateThrottle]
+
+    def post(self, request, *args, **kwargs):
+        ip_address = self._get_client_ip(request)
+        user_agent = self._get_user_agent(request)
+        email = request.data.get("email", "")
+
+        # Check temporary lockout
+        if is_login_locked_out(ip_address, email.lower() if email else ""):
+            logger.warning(
+                "Login attempt while locked out: ip=%s email=%s", ip_address, email
+            )
+            record_security_event(
+                event=SecurityAuditLog.EVENT_LOGIN_LOCKOUT,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                metadata={"email": email, "reason": "lockout_enforced"},
+                outcome="failure",
+            )
+            return Response(
+                {
+                    "detail": "Too many failed login attempts. "
+                    "Please try again later."
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        # Attempt authentication
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            # Record failed login
+            should_lockout, fail_count = record_login_failure(
+                ip_address, email.lower() if email else ""
+            )
+
+            # Try to find the user for audit purposes (without revealing existence)
+            target_user = None
+            try:
+                target_user = User.objects.get(email__iexact=email)
+            except (User.DoesNotExist, Exception):
+                pass
+
+            record_security_event(
+                event=SecurityAuditLog.EVENT_LOGIN_FAILED,
+                target_user=target_user,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                metadata={"fail_count": fail_count},
+                outcome="failure",
+            )
+
+            logger.warning(
+                "Login failed: ip=%s email=%s fail_count=%d",
+                ip_address, email, fail_count,
+            )
+
+            # Route security alert if threshold is approaching
+            if should_lockout:
+                from core.security import should_emit_security_alert, route_security_alert
+                if should_emit_security_alert(
+                    "repeated_auth_failures",
+                    ip_address=ip_address,
+                    target_user=target_user,
+                ):
+                    route_security_alert(
+                        "repeated_auth_failures",
+                        metadata={"ip": ip_address, "email": email, "count": fail_count},
+                        organization=target_user.role_assignments.first().organization if target_user and target_user.role_assignments.first() else None,
+                    )
+
+            # Generic error message — does not reveal whether the email exists
+            return Response(
+                {"detail": "Invalid email or password."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # Successful login — extract the authenticated user from the serializer
+        # simplejwt stores user differently depending on version; look in both locations
+        user = serializer.user if hasattr(serializer, "user") else serializer.validated_data.get("user")
+        if user is None:
+            # Fallback: look up user by email from the validated credentials
+            try:
+                from accounts.models import User as UserModel
+                user = UserModel.objects.get(
+                    email__iexact=request.data.get("email", ""),
+                    is_active=True,
+                )
+            except Exception:
+                user = None
+
+        if user:
+            clear_login_failures(ip_address, user.email.lower())
+            record_security_event(
+                event=SecurityAuditLog.EVENT_LOGIN,
+                actor=user,
+                target_user=user,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                organization=self._get_user_org(user),
+            )
+
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def _get_client_ip(request):
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        if xff:
+            return xff.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR")
+
+    @staticmethod
+    def _get_user_agent(request):
+        return request.META.get("HTTP_USER_AGENT", "")
+
+    @staticmethod
+    def _get_user_org(user):
+        """Get the user's primary organization for audit scoping."""
+        assignment = user.role_assignments.filter(is_active=True).first()
+        return assignment.organization if assignment else None
+
+
+class PasswordChangeView(APIView):
+    """
+    POST /api/auth/change-password/
+
+    Requires authentication.  Validates old password, enforces password
+    strength rules, revokes existing sessions after change.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = PasswordChangeSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        old_password = serializer.validated_data["old_password"]
+        new_password = serializer.validated_data["new_password"]
+
+        # Verify old password
+        if not user.check_password(old_password):
+            record_security_event(
+                event=SecurityAuditLog.EVENT_PASSWORD_CHANGE,
+                actor=user,
+                target_user=user,
+                ip_address=self._get_client_ip(request),
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                outcome="failure",
+                metadata={"reason": "wrong_old_password"},
+            )
+            return Response(
+                {"detail": "Current password is incorrect."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Set new password
+        user.set_password(new_password)
+        user.save(update_fields=["password", "updated_at"])
+
+        # Revoke existing sessions
+        revoked = revoke_user_sessions(user)
+
+        record_security_event(
+            event=SecurityAuditLog.EVENT_PASSWORD_CHANGE,
+            actor=user,
+            target_user=user,
+            ip_address=self._get_client_ip(request),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            metadata={"sessions_revoked": revoked},
+        )
+
+        return Response(
+            {"detail": "Password changed successfully. Please log in again."},
+            status=status.HTTP_200_OK,
+        )
+
+    @staticmethod
+    def _get_client_ip(request):
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        if xff:
+            return xff.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR")
+
+
+class SecurityAuditLogListView(generics.ListAPIView):
+    """
+    GET /api/security/audit-log/
+
+    List security audit events.  Restricted to users with the
+    ``security.audit.view`` permission.  Results are scoped to the
+    user's organization.
+    """
+    permission_classes = [IsAuthenticated, HasPermission("security.audit.view")]
+    serializer_class = SecurityAuditLogSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = SecurityAuditLog.objects.select_related(
+            "actor", "target_user", "organization"
+        ).order_by("-created_at")
+
+        if user.is_superuser or user.is_staff:
+            return qs
+
+        # Scope to the user's accessible organizations
+        org_ids = set()
+        for assignment in user.get_active_assignments():
+            if assignment.organization_id:
+                org_ids.add(assignment.organization_id)
+
+        # Include events where the user is the actor or target (their own activity)
+        from django.db.models import Q
+        return qs.filter(
+            Q(organization_id__in=org_ids) |
+            Q(actor=user) |
+            Q(target_user=user)
+        ).distinct()
 
 
 class MeView(APIView):
@@ -121,8 +389,23 @@ class LogoutView(APIView):
         except TokenError as exc:
             raise ValidationError({"refresh": str(exc)})
 
+        record_security_event(
+            event=SecurityAuditLog.EVENT_LOGOUT,
+            actor=request.user,
+            target_user=request.user,
+            ip_address=self._get_client_ip(request),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        )
+
         logger.info("User logged out: %s", request.user.email)
         return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def _get_client_ip(request):
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        if xff:
+            return xff.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR")
 
 
 # =============================================================================

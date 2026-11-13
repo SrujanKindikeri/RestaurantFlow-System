@@ -7,7 +7,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 
-from .models import User, UserProfile, Role, Permission, UserRoleAssignment
+from .models import User, UserProfile, Role, Permission, UserRoleAssignment, SecurityAuditLog
 
 
 # =============================================================================
@@ -247,3 +247,38 @@ class UserRoleAssignmentAdmin(admin.ModelAdmin):
             {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
         ),
     )
+
+
+# =============================================================================
+# Phase 21 — Security Audit Log admin (read-only)
+# =============================================================================
+
+@admin.register(SecurityAuditLog)
+class SecurityAuditLogAdmin(admin.ModelAdmin):
+    """Read-only admin for security audit logs — no add, change, or delete."""
+    list_display = [
+        "event",
+        "actor",
+        "target_user",
+        "organization",
+        "outcome",
+        "ip_address",
+        "created_at",
+    ]
+    list_filter = ["event", "outcome", "created_at"]
+    search_fields = ["actor__email", "target_user__email", "ip_address", "request_id"]
+    ordering = ["-created_at"]
+    readonly_fields = [
+        "id", "actor", "target_user", "event", "organization",
+        "outcome", "ip_address", "user_agent", "request_id",
+        "metadata", "created_at", "updated_at",
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

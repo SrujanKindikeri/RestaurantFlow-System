@@ -10,22 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveIndex(
-            model_name='notification',
-            name='notif_company_type_created_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='notification',
-            name='notif_rest_type_created_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='notification',
-            name='notif_branch_type_created_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='notificationrecipient',
-            name='notif_recip_user_status_created_idx',
-        ),
         migrations.RenameIndex(
             model_name='notification',
             new_name='notificatio_company_c7a3fc_idx',

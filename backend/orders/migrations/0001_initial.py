@@ -17,9 +17,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("organizations", "0001_initial"),
         ("counters",      "0001_initial"),
-        # menu app uses auto-migrations (no named initial migration file);
-        # Django resolves the FK to menu.MenuItem at DB level via the app registry.
-        # If menu gets a named migration in future, add ("menu", "0001_initial") here.
+        ("menu",          "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

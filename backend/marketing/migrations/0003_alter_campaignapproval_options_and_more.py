@@ -10,7 +10,8 @@ class Migration(migrations.Migration):
     dependencies = [
         ('organizations', '0002_rename_branch_rest_active_idx_organizatio_restaur_77d6a6_idx_and_more'),
         ('menu', '0003_rename_menu_catg_rest_active_idx_menu_catego_restaur_c97a7f_idx_and_more'),
-        ('marketing', '0001_initial'),
+
+        ('marketing', '0002_performance_indexes'),
     ]
 
     operations = [
