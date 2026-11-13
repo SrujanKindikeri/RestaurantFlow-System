@@ -10,3 +10,6 @@ class InventoryConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "inventory"
     verbose_name = "Inventory & Stock Management"
+
+    def ready(self):
+        import inventory.signals  # noqa: F401 — register signal handlers

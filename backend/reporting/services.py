@@ -9,13 +9,13 @@
 import logging
 from datetime import date, timedelta
 
-from django.core.cache import cache
-
 from reporting import selectors, access as r_access
 from reporting.constants import (
     CACHE_TTL_TREND, CACHE_TTL_TOP_ITEMS, CACHE_TTL_BRANCH,
     CACHE_TTL_FINANCIAL, CACHE_TTL_DASHBOARD,
 )
+from common.caching.services import CacheService
+from common.caching.keys import reporting_key
 
 logger = logging.getLogger("reporting")
 
@@ -38,15 +38,19 @@ def get_sales_summary(user, filters):
 def get_sales_trend(user, filters):
     from reporting.validators import validate_granularity
     validate_granularity(filters.granularity)
-    key = f"reporting:trend:{_scope_key(user, filters.restaurant_id, filters.branch_id)}:{filters.date_from}:{filters.date_to}:{filters.granularity}"
-    cached = cache.get(key)
+    scope_hash = _scope_key(user, filters.restaurant_id, filters.branch_id)
+    key = reporting_key(
+        "sales_trend", scope_hash,
+        str(filters.date_from), str(filters.date_to),
+    ) + f":{filters.granularity}"
+    cached = CacheService.get(key)
     if cached is not None:
         return cached
     result = selectors.select_sales_trend(
         user, filters.date_from, filters.date_to, filters.granularity,
         filters.restaurant_id, filters.branch_id,
     )
-    cache.set(key, result, CACHE_TTL_TREND)
+    CacheService.set(key, result, CACHE_TTL_TREND)
     return result
 
 
@@ -87,8 +91,12 @@ def get_menu_items(user, filters):
 
 
 def get_top_selling_items(user, filters):
-    key = f"reporting:top:{_scope_key(user, filters.restaurant_id, filters.branch_id)}:{filters.date_from}:{filters.date_to}:{filters.limit}:{filters.sort_by}"
-    cached = cache.get(key)
+    scope_hash = _scope_key(user, filters.restaurant_id, filters.branch_id)
+    key = reporting_key(
+        "top_selling", scope_hash,
+        str(filters.date_from), str(filters.date_to),
+    ) + f":{filters.limit}:{filters.sort_by}"
+    cached = CacheService.get(key)
     if cached is not None:
         return cached
     result = selectors.select_top_selling_items(
@@ -96,7 +104,7 @@ def get_top_selling_items(user, filters):
         filters.limit, filters.sort_by,
         filters.restaurant_id, filters.branch_id,
     )
-    cache.set(key, result, CACHE_TTL_TOP_ITEMS)
+    CacheService.set(key, result, CACHE_TTL_TOP_ITEMS)
     return result
 
 
@@ -119,14 +127,18 @@ def get_menu_profitability(user, filters):
 # ---------------------------------------------------------------------------
 
 def get_branch_performance(user, filters):
-    key = f"reporting:branch:{_scope_key(user, filters.restaurant_id, None)}:{filters.date_from}:{filters.date_to}"
-    cached = cache.get(key)
+    scope_hash = _scope_key(user, filters.restaurant_id, None)
+    key = reporting_key(
+        "branch_performance", scope_hash,
+        str(filters.date_from), str(filters.date_to),
+    )
+    cached = CacheService.get(key)
     if cached is not None:
         return cached
     result = selectors.select_branch_performance(
         user, filters.date_from, filters.date_to, filters.restaurant_id,
     )
-    cache.set(key, result, CACHE_TTL_BRANCH)
+    CacheService.set(key, result, CACHE_TTL_BRANCH)
     return result
 
 

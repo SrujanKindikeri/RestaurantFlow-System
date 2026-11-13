@@ -19,6 +19,9 @@
 
 import logging
 from django.db.models import Q
+from common.caching.services import CacheService, CACHE_MISS_SENTINEL
+from common.caching.keys import user_permissions_key
+from common.caching.policies import add_jitter, USER_PERMISSIONS_TTL
 
 logger = logging.getLogger("accounts")
 
@@ -35,12 +38,32 @@ def has_permission(user, code: str) -> bool:
     Inactive users always fail.
     Permission is granted if any of the user's active role assignments
     include a role that holds the specified permission code.
+
+    Uses Redis cache for permissions lookup. On Redis failure (CACHE_MISS_SENTINEL),
+    falls back to DB to ensure Redis failure never silently grants or denies access.
     """
     if not user or not user.is_authenticated:
         return False
     if not user.is_active:
         return False
-    return user.has_perm_code(code)
+    if user.is_superuser:
+        return True
+
+    cache_key = user_permissions_key(str(user.pk))
+    cached = CacheService.get_secure(cache_key)
+
+    if cached is CACHE_MISS_SENTINEL:
+        # Redis down — go directly to DB
+        return user.has_perm_code(code)
+
+    if cached is None:
+        # Not in cache — query DB and store result
+        permissions_set = user.get_permissions_set()
+        CacheService.set(cache_key, list(permissions_set), add_jitter(USER_PERMISSIONS_TTL))
+        return code in permissions_set
+
+    # Cache hit — cached is a list of permission codes
+    return code in cached
 
 
 # ---------------------------------------------------------------------------

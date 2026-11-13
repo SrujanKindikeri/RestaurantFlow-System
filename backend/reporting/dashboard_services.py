@@ -10,8 +10,6 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.core.cache import cache
-
 from reporting import aggregations as agg
 from reporting import access as r_access
 from reporting.aggregations import growth_pct, _safe_div
@@ -19,6 +17,9 @@ from reporting.constants import (
     CACHE_TTL_DASHBOARD, CACHE_TTL_TOP_ITEMS,
     ZERO,
 )
+from common.caching.services import CacheService
+from common.caching.keys import dashboard_kpi_key
+from common.caching.policies import add_jitter, DASHBOARD_KPI_TTL
 
 logger = logging.getLogger("reporting")
 
@@ -57,8 +58,13 @@ def get_dashboard_kpis(user, restaurant_id=None, branch_id=None):
     if branch:
         accessible = accessible.filter(pk=branch.pk)
 
-    cache_key = _cache_key(user, restaurant, branch, "dashboard_kpis")
-    cached = cache.get(cache_key)
+    cache_key = dashboard_kpi_key(
+        user_id=str(user.pk),
+        restaurant_id=str(restaurant.pk) if restaurant else "all",
+        branch_id=str(branch.pk) if branch else "all",
+        date_str=date.today().isoformat(),
+    )
+    cached = CacheService.get(cache_key)
     if cached is not None:
         return cached
 
@@ -190,5 +196,5 @@ def get_dashboard_kpis(user, restaurant_id=None, branch_id=None):
         },
     }
 
-    cache.set(cache_key, result, CACHE_TTL_DASHBOARD)
+    CacheService.set(cache_key, result, add_jitter(DASHBOARD_KPI_TTL))
     return result
