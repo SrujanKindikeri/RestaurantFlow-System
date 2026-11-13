@@ -40,11 +40,11 @@ export function WaiterPage() {
     setLoading(true)
     Promise.all([
       getOperationalTables(),
-      listOrders({ assigned_waiter: user?.id, status: 'CONFIRMED' }),
+      listOrders({ ...(user?.id != null ? { assigned_waiter: String(user.id) } : {}), status: 'CONFIRMED' }),
     ])
       .then(([t, o]) => {
-        setTables(t.data)
-        setOrders(o.data.results ?? o.data)
+        setTables(t)
+        setOrders((o as any).results ?? o)
       })
       .finally(() => setLoading(false))
   }

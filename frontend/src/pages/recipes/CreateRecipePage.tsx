@@ -32,7 +32,7 @@ export function CreateRecipePage() {
   useEffect(() => {
     if (!restaurantId) return
     listMenuItems({ restaurant: restaurantId, is_active: 'true' })
-      .then(r => setMenuItems(r.data?.results ?? r.data ?? []))
+      .then(r => setMenuItems((r as any)?.results ?? r ?? []))
       .catch(() => {})
   }, [restaurantId])
 

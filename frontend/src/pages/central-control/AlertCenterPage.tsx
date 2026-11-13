@@ -30,9 +30,9 @@ function AlertRow({
   onDismiss,
 }: {
   alert: CentralAlert
-  onAcknowledge: (id: string) => void
-  onResolve: (id: string) => void
-  onDismiss: (id: string) => void
+  onAcknowledge: (id: string) => Promise<void>
+  onResolve: (id: string) => Promise<void>
+  onDismiss: (id: string) => Promise<void>
 }) {
   const [loading, setLoading] = useState(false)
 

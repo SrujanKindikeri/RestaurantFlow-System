@@ -40,7 +40,7 @@ export function InventoryDashboard() {
 
   useEffect(() => {
     getInventoryDashboard()
-      .then(r => setData(r.data))
+      .then(r => setData(r))
       .catch(e => setError(e?.response?.data?.message ?? 'Failed to load dashboard'))
       .finally(() => setLoading(false))
   }, [])

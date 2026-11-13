@@ -2370,8 +2370,8 @@ export interface UpdateExpensePayload {
 // Expense Correction
 // ---------------------------------------------------------------------------
 
-export type CorrectionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
-export type CorrectionType = 'AMOUNT_CORRECTION' | 'CATEGORY_CORRECTION' | 'DATE_CORRECTION' | 'VENDOR_CORRECTION' | 'CANCELLATION' | 'OTHER'
+export type ExpenseCorrectionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+export type ExpenseCorrectionType = 'AMOUNT_CORRECTION' | 'CATEGORY_CORRECTION' | 'DATE_CORRECTION' | 'VENDOR_CORRECTION' | 'CANCELLATION' | 'OTHER'
 
 export interface ExpenseCorrectionRequest {
   id: string
@@ -2379,10 +2379,10 @@ export interface ExpenseCorrectionRequest {
   expense_number: string
   requested_by: number
   requested_by_detail: UserMinimal
-  correction_type: CorrectionType
+  correction_type: ExpenseCorrectionType
   requested_data: Record<string, string>
   reason: string
-  status: CorrectionStatus
+  status: ExpenseCorrectionStatus
   reviewed_by: number | null
   reviewed_by_detail: UserMinimal | null
   reviewed_at: string | null
@@ -2392,7 +2392,7 @@ export interface ExpenseCorrectionRequest {
 }
 
 export interface CreateCorrectionRequestPayload {
-  correction_type: CorrectionType
+  correction_type: ExpenseCorrectionType
   requested_data: Record<string, string>
   reason: string
 }

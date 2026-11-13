@@ -64,7 +64,7 @@ export function RecipeDetailPage() {
   useEffect(() => {
     if (!restaurantId) return
     listInventoryItems({ restaurant: restaurantId, is_active: 'true' })
-      .then(r => setInventoryItems(r.data))
+      .then(r => setInventoryItems(r))
       .catch(() => {})
   }, [restaurantId])
 

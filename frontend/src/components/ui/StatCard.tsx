@@ -2,6 +2,7 @@
 // RestaurantFlow — Stat Card
 // =============================================================================
 
+import React from 'react'
 import { cn } from '@/utils/cn'
 
 interface StatCardProps {
@@ -20,7 +21,7 @@ const colorClasses = {
   yellow: 'text-yellow-400',
 }
 
-export function StatCard({
+export const StatCard = React.memo(function StatCard({
   label,
   value,
   sub,
@@ -44,4 +45,4 @@ export function StatCard({
       )}
     </div>
   )
-}
+})

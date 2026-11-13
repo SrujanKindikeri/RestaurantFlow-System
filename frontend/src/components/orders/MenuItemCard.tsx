@@ -3,6 +3,7 @@
 // Phase 6
 // =============================================================================
 
+import React from 'react'
 import { cn } from '@/utils/cn'
 import type { CatalogItem, FoodType } from '@/types'
 
@@ -19,7 +20,7 @@ interface MenuItemCardProps {
   onAdd: (item: CatalogItem) => void
 }
 
-export function MenuItemCard({ item, onAdd }: MenuItemCardProps) {
+export const MenuItemCard = React.memo(function MenuItemCard({ item, onAdd }: MenuItemCardProps) {
   const hasPrice = item.price != null
 
   return (
@@ -73,4 +74,4 @@ export function MenuItemCard({ item, onAdd }: MenuItemCardProps) {
       </button>
     </div>
   )
-}
+})

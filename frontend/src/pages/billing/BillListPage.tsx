@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listBills } from '@/services/billing'
 import { BillStatusBadge } from '@/components/billing/BillStatusBadge'
+import { Skeleton } from '@/components/ui/Skeleton'
 import type { BillSummary, BillStatus, BillListParams, OrderType } from '@/types'
 
 function fmt(v: string) {
@@ -125,7 +126,11 @@ export function BillListPage() {
       {/* Table */}
       <div className="rounded-lg border border-gray-800 bg-gray-900/60 overflow-hidden">
         {loading ? (
-          <div className="py-12 text-center text-gray-500 text-sm">Loading bills…</div>
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full bg-gray-800" />
+            ))}
+          </div>
         ) : bills.length === 0 ? (
           <div className="py-12 text-center text-gray-500 text-sm">No bills match your filters.</div>
         ) : (

@@ -206,8 +206,8 @@ export function PaymentHistoryPage() {
                           {p.bill_number}
                         </Link>
                       )}
-                      {p.order_number && (
-                        <div className="text-gray-500">{p.order_number}</div>
+                      {(p as any).order_number && (
+                        <div className="text-gray-500">{(p as any).order_number}</div>
                       )}
                     </div>
                   </td>

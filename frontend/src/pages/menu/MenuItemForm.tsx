@@ -58,7 +58,7 @@ export function MenuItemForm({
     if (!initialValues) {
       setForm((p) => ({ ...p, category: '', tax_rate: '' }))
     }
-  }, [form.restaurant]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.restaurant])
 
   const setField = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>

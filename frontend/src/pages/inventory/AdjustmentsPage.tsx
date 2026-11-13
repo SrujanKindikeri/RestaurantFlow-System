@@ -26,7 +26,7 @@ export function AdjustmentsPage() {
   const load = useCallback(() => {
     setLoading(true)
     listAdjustments()
-      .then(r => setAdjustments(r.data))
+      .then(r => setAdjustments(r))
       .catch(e => setError(e?.response?.data?.message ?? 'Failed to load'))
       .finally(() => setLoading(false))
   }, [])
@@ -35,8 +35,8 @@ export function AdjustmentsPage() {
 
   const openForm = async () => {
     const [items, locs] = await Promise.all([listInventoryItems(), listStorageLocations()])
-    setInvItems(items.data)
-    setLocations(locs.data)
+    setInvItems(items)
+    setLocations(locs)
     setShowForm(true)
   }
 
@@ -45,7 +45,7 @@ export function AdjustmentsPage() {
     if (!itemId || !locationId) { setCurrentBalance(null); return }
     try {
       const r = await listStockBalances({ item: itemId, location: locationId })
-      const bal = r.data[0]
+      const bal = r[0]
       if (bal) {
         setCurrentBalance(bal.quantity)
         setForm(f => ({ ...f, unit: bal.item_unit }))

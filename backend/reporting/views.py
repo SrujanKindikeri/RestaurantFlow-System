@@ -47,6 +47,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from reporting import services
+from reporting.constants import MAX_EXPORT_ROWS
 from reporting.dashboard_services import get_dashboard_kpis
 from reporting.export_services import (
     generate_csv, record_export_audit,
@@ -436,10 +437,26 @@ class ExportCSVView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        # Normalise data to a row list before checking size
+        rows = data if isinstance(data, list) else [data]
+        effective_rows = rows if len(rows) > 1 else data
+        row_list = effective_rows if isinstance(effective_rows, list) else [effective_rows]
+        if len(row_list) > MAX_EXPORT_ROWS:
+            logger.warning(
+                "Export rejected for %s: %d rows exceeds MAX_EXPORT_ROWS=%d",
+                report_type, len(row_list), MAX_EXPORT_ROWS,
+            )
+            return Response(
+                {
+                    "error": True,
+                    "code": "EXPORT_TOO_LARGE",
+                    "message": "Export exceeds 10,000 rows. Narrow your date range or add filters.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
-            # Normalise: if data is a dict wrapping lists, flatten
-            rows = data if isinstance(data, list) else [data]
-            csv_bytes, row_count = generate_csv(export_type, rows if len(rows) > 1 else data)
+            csv_bytes, row_count = generate_csv(export_type, effective_rows)
         except Exception as exc:
             logger.error("CSV generation error for %s: %s", report_type, exc, exc_info=True)
             record_export_audit(

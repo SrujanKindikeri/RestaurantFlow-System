@@ -163,11 +163,11 @@ export interface IssueFilters {
 export const centralControlApi = {
   // Dashboard
   getDashboard: (organizationId?: string) =>
-    get<CentralDashboard>('/central-control/dashboard/', organizationId ? { organization_id: organizationId } : {}),
+    get<CentralDashboard>('/central-control/dashboard/', organizationId ? { params: { organization_id: organizationId } } : {}),
 
   // Restaurant health
   getRestaurantHealth: (organizationId?: string) =>
-    get<{ results: RestaurantHealth[]; count: number }>('/central-control/restaurants/health/', organizationId ? { organization_id: organizationId } : {}),
+    get<{ results: RestaurantHealth[]; count: number }>('/central-control/restaurants/health/', organizationId ? { params: { organization_id: organizationId } } : {}),
 
   // Restaurants list
   getRestaurants: (params?: Record<string, unknown>) =>

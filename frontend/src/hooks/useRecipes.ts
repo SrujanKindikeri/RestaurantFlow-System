@@ -17,7 +17,6 @@ import type {
   AddRecipeItemPayload,
   UpdateRecipeItemPayload,
   ManualConsumptionPayload,
-  ReversalPayload,
   UpdateBranchConsumptionConfigPayload,
   BranchConsumptionConfig,
 } from '@/types'
@@ -73,14 +72,14 @@ export const consumptionKeys = {
 export function useRecipes(params?: RecipeListParams) {
   return useQuery<Recipe[], Error>({
     queryKey: recipeKeys.list(params),
-    queryFn: () => listRecipes(params).then(r => r.data),
+    queryFn: () => listRecipes(params),
   })
 }
 
 export function useRecipe(id: string) {
   return useQuery<RecipeDetail, Error>({
     queryKey: recipeKeys.detail(id),
-    queryFn: () => getRecipe(id).then(r => r.data),
+    queryFn: () => getRecipe(id),
     enabled: !!id,
   })
 }
@@ -88,7 +87,7 @@ export function useRecipe(id: string) {
 export function useRecipesByMenuItem(menuItemId: string) {
   return useQuery<Recipe[], Error>({
     queryKey: recipeKeys.byMenuItem(menuItemId),
-    queryFn: () => getRecipesByMenuItem(menuItemId).then(r => r.data),
+    queryFn: () => getRecipesByMenuItem(menuItemId),
     enabled: !!menuItemId,
   })
 }
@@ -96,7 +95,7 @@ export function useRecipesByMenuItem(menuItemId: string) {
 export function useRecipeCost(id: string, enabled = true) {
   return useQuery<RecipeCost, Error>({
     queryKey: recipeKeys.cost(id),
-    queryFn: () => getRecipeCost(id).then(r => r.data),
+    queryFn: () => getRecipeCost(id),
     enabled: !!id && enabled,
   })
 }
@@ -104,7 +103,7 @@ export function useRecipeCost(id: string, enabled = true) {
 export function useCreateRecipe() {
   const qc = useQueryClient()
   return useMutation<RecipeDetail, Error, CreateRecipePayload>({
-    mutationFn: (data) => createRecipe(data).then(r => r.data),
+    mutationFn: (data) => createRecipe(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: recipeKeys.lists() }),
   })
 }
@@ -112,7 +111,7 @@ export function useCreateRecipe() {
 export function useUpdateRecipe(id: string) {
   const qc = useQueryClient()
   return useMutation<RecipeDetail, Error, UpdateRecipePayload>({
-    mutationFn: (data) => updateRecipe(id, data).then(r => r.data),
+    mutationFn: (data) => updateRecipe(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: recipeKeys.detail(id) })
       qc.invalidateQueries({ queryKey: recipeKeys.lists() })
@@ -123,7 +122,7 @@ export function useUpdateRecipe(id: string) {
 export function useActivateRecipe() {
   const qc = useQueryClient()
   return useMutation<RecipeDetail, Error, string>({
-    mutationFn: (id) => activateRecipe(id).then(r => r.data),
+    mutationFn: (id) => activateRecipe(id),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: recipeKeys.detail(data.id) })
       qc.invalidateQueries({ queryKey: recipeKeys.lists() })
@@ -135,7 +134,7 @@ export function useActivateRecipe() {
 export function useArchiveRecipe() {
   const qc = useQueryClient()
   return useMutation<RecipeDetail, Error, string>({
-    mutationFn: (id) => archiveRecipe(id).then(r => r.data),
+    mutationFn: (id) => archiveRecipe(id),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: recipeKeys.detail(data.id) })
       qc.invalidateQueries({ queryKey: recipeKeys.lists() })
@@ -147,7 +146,7 @@ export function useArchiveRecipe() {
 export function useAddRecipeIngredient(recipeId: string) {
   const qc = useQueryClient()
   return useMutation<unknown, Error, AddRecipeItemPayload>({
-    mutationFn: (data) => addRecipeIngredient(recipeId, data).then(r => r.data),
+    mutationFn: (data) => addRecipeIngredient(recipeId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: recipeKeys.detail(recipeId) })
     },
@@ -157,7 +156,7 @@ export function useAddRecipeIngredient(recipeId: string) {
 export function useUpdateRecipeIngredient(recipeId: string, itemId: string) {
   const qc = useQueryClient()
   return useMutation<unknown, Error, UpdateRecipeItemPayload>({
-    mutationFn: (data) => updateRecipeIngredient(recipeId, itemId, data).then(r => r.data),
+    mutationFn: (data) => updateRecipeIngredient(recipeId, itemId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: recipeKeys.detail(recipeId) })
     },
@@ -167,7 +166,7 @@ export function useUpdateRecipeIngredient(recipeId: string, itemId: string) {
 export function useRemoveRecipeIngredient(recipeId: string) {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
-    mutationFn: (itemId) => removeRecipeIngredient(recipeId, itemId).then(r => r.data),
+    mutationFn: (itemId) => removeRecipeIngredient(recipeId, itemId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: recipeKeys.detail(recipeId) })
     },
@@ -181,14 +180,14 @@ export function useRemoveRecipeIngredient(recipeId: string) {
 export function useConsumptionBatches(params?: ConsumptionListParams) {
   return useQuery<ConsumptionBatch[], Error>({
     queryKey: consumptionKeys.list(params),
-    queryFn: () => listConsumptionBatches(params).then(r => r.data),
+    queryFn: () => listConsumptionBatches(params),
   })
 }
 
 export function useConsumptionBatch(id: string) {
   return useQuery<ConsumptionBatchDetail, Error>({
     queryKey: consumptionKeys.detail(id),
-    queryFn: () => getConsumptionBatch(id).then(r => r.data),
+    queryFn: () => getConsumptionBatch(id),
     enabled: !!id,
   })
 }
@@ -196,7 +195,7 @@ export function useConsumptionBatch(id: string) {
 export function useConsumptionByOrder(orderId: string) {
   return useQuery<ConsumptionBatchDetail[], Error>({
     queryKey: consumptionKeys.byOrder(orderId),
-    queryFn: () => getConsumptionByOrder(orderId).then(r => r.data),
+    queryFn: () => getConsumptionByOrder(orderId),
     enabled: !!orderId,
   })
 }
@@ -204,7 +203,7 @@ export function useConsumptionByOrder(orderId: string) {
 export function useManualConsume() {
   const qc = useQueryClient()
   return useMutation<unknown, Error, ManualConsumptionPayload>({
-    mutationFn: (data) => manualConsume(data).then(r => r.data),
+    mutationFn: (data) => manualConsume(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: consumptionKeys.lists() }),
   })
 }
@@ -212,7 +211,7 @@ export function useManualConsume() {
 export function useReverseConsumption() {
   const qc = useQueryClient()
   return useMutation<ConsumptionBatchDetail, Error, { id: string; reason?: string }>({
-    mutationFn: ({ id, reason }) => reverseConsumption(id, { reason }).then(r => r.data),
+    mutationFn: ({ id, reason }) => reverseConsumption(id, { reason }),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: consumptionKeys.detail(data.id) })
       qc.invalidateQueries({ queryKey: consumptionKeys.lists() })
@@ -223,7 +222,7 @@ export function useReverseConsumption() {
 export function useBranchConsumptionConfig(branchId: string) {
   return useQuery<BranchConsumptionConfig, Error>({
     queryKey: consumptionKeys.config(branchId),
-    queryFn: () => getBranchConsumptionConfig(branchId).then(r => r.data),
+    queryFn: () => getBranchConsumptionConfig(branchId),
     enabled: !!branchId,
   })
 }
@@ -231,7 +230,7 @@ export function useBranchConsumptionConfig(branchId: string) {
 export function useUpdateBranchConsumptionConfig() {
   const qc = useQueryClient()
   return useMutation<BranchConsumptionConfig, Error, UpdateBranchConsumptionConfigPayload>({
-    mutationFn: (data) => updateBranchConsumptionConfig(data).then(r => r.data),
+    mutationFn: (data) => updateBranchConsumptionConfig(data),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: consumptionKeys.config(data.branch) })
     },

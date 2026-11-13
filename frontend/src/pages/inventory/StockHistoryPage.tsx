@@ -35,7 +35,7 @@ export function StockHistoryPage() {
     if (dateFrom) params.date_from = dateFrom
     if (dateTo) params.date_to = dateTo
     listStockMovements(params)
-      .then(r => setMovements(r.data))
+      .then(r => setMovements(r))
       .catch(e => setError(e?.response?.data?.message ?? 'Failed to load movements'))
       .finally(() => setLoading(false))
   }, [filterType, dateFrom, dateTo])

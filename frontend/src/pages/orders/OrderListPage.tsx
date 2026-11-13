@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { useOrders } from '@/hooks/useOrders'
 import { OrderStatusBadge, OrderTypeBadge } from '@/components/orders/OrderStatusBadge'
 import { Card } from '@/components/Card'
+import { Skeleton } from '@/components/ui/Skeleton'
 import type { OrderStatus, OrderType } from '@/types'
 
 export function OrderListPage() {
@@ -83,9 +84,11 @@ export function OrderListPage() {
 
       {/* Table */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" aria-label="Loading orders" />
-        </div>
+        <Card className="p-4 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full bg-gray-800" />
+          ))}
+        </Card>
       ) : error ? (
         <Card className="py-8 text-center">
           <p className="text-sm text-red-400">Failed to load orders.</p>

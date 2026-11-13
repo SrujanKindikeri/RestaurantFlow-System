@@ -105,9 +105,9 @@ export function POSPage() {
   // Load menu data
   // -------------------------------------------------------------------------
   useEffect(() => {
-    listCategories().then(r => setCategories(r.data.results ?? r.data))
-    listMenuItems().then(r => setMenuItems(r.data.results ?? r.data))
-    getOperationalTables().then(r => setTables(r.data))
+    listCategories().then(r => setCategories((r as any).results ?? r))
+    listMenuItems().then(r => setMenuItems((r as any).results ?? r))
+    getOperationalTables().then(r => setTables(r))
   }, [])
 
   // -------------------------------------------------------------------------
@@ -224,7 +224,7 @@ export function POSPage() {
           ...(state.selectedTable && { table_id: state.selectedTable.id }),
         }
         const orderRes = await createOrder(orderData)
-        orderId = orderRes.data.id
+        orderId = (orderRes as any).id
         setState(s => ({ ...s, activeOrderId: orderId }))
       }
 

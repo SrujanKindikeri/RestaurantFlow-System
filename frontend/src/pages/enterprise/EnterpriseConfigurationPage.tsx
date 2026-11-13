@@ -74,7 +74,7 @@ export function EnterpriseConfigurationPage() {
         reason: editReason,
       }
       if (branchId) params.branch_id = branchId
-      await enterpriseApi.setConfiguration(params)
+      await enterpriseApi.setConfiguration(params as { configuration_key: string; configuration_value: string; reason?: string; branch_id?: string; restaurant_id?: string; company_id?: string })
       showToast(`${key} updated.`, 'success')
       setEditKey(null)
       setEditReason('')

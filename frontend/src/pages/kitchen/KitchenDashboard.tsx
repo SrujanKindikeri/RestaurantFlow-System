@@ -23,6 +23,7 @@ import {
   useReadyKitchenItem,
 } from '@/hooks/useKitchen'
 import { listKitchenOrders } from '@/services/kitchen'
+import { Skeleton } from '@/components/ui/Skeleton'
 import type {
   KitchenOrder,
   KitchenOrderStatus,
@@ -179,10 +180,11 @@ export function KitchenDashboard() {
 
   if (isInitialLoading) {
     return (
-      <div className="flex items-center justify-center h-96 text-gray-500">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500 mx-auto mb-3" />
-          <p>Loading kitchen orders…</p>
+      <div className="p-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 bg-gray-800 rounded-xl" />
+          ))}
         </div>
       </div>
     )

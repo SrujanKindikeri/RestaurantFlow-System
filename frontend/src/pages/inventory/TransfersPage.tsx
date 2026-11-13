@@ -45,7 +45,7 @@ export function TransfersPage() {
     const params: Record<string, string> = {}
     if (filterStatus) params.status = filterStatus
     listStockTransfers(params)
-      .then(r => setTransfers(r.data))
+      .then(r => setTransfers(r))
       .catch(e => setError(e?.response?.data?.message ?? 'Failed to load transfers'))
       .finally(() => setLoading(false))
   }, [filterStatus])
@@ -57,8 +57,8 @@ export function TransfersPage() {
       listStorageLocations(restaurantId ? {} : {}),
       listInventoryItems(restaurantId ? { restaurant: restaurantId } : {}),
     ])
-    setLocations(locs.data)
-    setInvItems(items.data)
+    setLocations(locs)
+    setInvItems(items)
   }, [restaurantId])
 
   const openCreate = async () => {
@@ -82,7 +82,7 @@ export function TransfersPage() {
 
   const selectTransfer = async (id: string) => {
     setLoadingDetail(true)
-    try { const r = await getStockTransfer(id); setSelected(r.data) } catch { /* ignore */ }
+    try { const r = await getStockTransfer(id); setSelected(r) } catch { /* ignore */ }
     setLoadingDetail(false)
   }
 

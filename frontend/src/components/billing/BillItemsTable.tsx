@@ -3,6 +3,7 @@
 // Phase 8
 // =============================================================================
 
+import React from 'react'
 import type { BillItem } from '@/types'
 
 interface Props {
@@ -16,7 +17,7 @@ function fmt(v: string, currency = '₹') {
   return `${currency}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-export function BillItemsTable({ items, currency = '₹' }: Props) {
+export const BillItemsTable = React.memo(function BillItemsTable({ items, currency = '₹' }: Props) {
   if (!items || items.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">No items on this bill.</div>
@@ -72,4 +73,4 @@ export function BillItemsTable({ items, currency = '₹' }: Props) {
       </table>
     </div>
   )
-}
+})

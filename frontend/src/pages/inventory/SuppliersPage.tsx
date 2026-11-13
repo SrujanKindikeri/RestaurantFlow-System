@@ -32,7 +32,7 @@ export function SuppliersPage() {
     const params: Record<string, string> = {}
     if (restaurantId) params.restaurant = restaurantId
     listSuppliers(params)
-      .then(r => setSuppliers(r.data))
+      .then(r => setSuppliers(r))
       .catch(e => setError(e?.response?.data?.message ?? 'Failed to load suppliers'))
       .finally(() => setLoading(false))
   }, [restaurantId])

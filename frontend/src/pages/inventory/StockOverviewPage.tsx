@@ -26,7 +26,7 @@ export function StockOverviewPage() {
     if (filterStatus) params.status = filterStatus
     if (filterLocation) params.location = filterLocation
     listStockBalances(params)
-      .then(r => setBalances(r.data))
+      .then(r => setBalances(r))
       .catch(e => setError(e?.response?.data?.message ?? 'Failed to load stock'))
       .finally(() => setLoading(false))
   }, [filterStatus, filterLocation])

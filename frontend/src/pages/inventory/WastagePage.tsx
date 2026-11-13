@@ -38,7 +38,7 @@ export function WastagePage() {
     const params: Record<string, string> = {}
     if (filterStatus) params.status = filterStatus
     listWastages(params)
-      .then(r => setWastages(r.data))
+      .then(r => setWastages(r))
       .catch(e => setError(e?.response?.data?.message ?? 'Failed to load'))
       .finally(() => setLoading(false))
   }, [filterStatus])
@@ -47,8 +47,8 @@ export function WastagePage() {
 
   const openForm = async () => {
     const [items, locs] = await Promise.all([listInventoryItems(), listStorageLocations()])
-    setInvItems(items.data)
-    setLocations(locs.data)
+    setInvItems(items)
+    setLocations(locs)
     setShowForm(true)
   }
 

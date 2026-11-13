@@ -248,7 +248,7 @@ export const enterpriseApi = {
 
   // Branch lifecycle
   getBranches: (params?: { status?: string; restaurant_id?: string }) =>
-    get('/enterprise/branches/', params),
+    get('/enterprise/branches/', { params }),
 
   getBranchDetail: (branchId: string): Promise<BranchDetail> =>
     get(`/enterprise/branches/${branchId}/`),
@@ -270,7 +270,7 @@ export const enterpriseApi = {
 
   // Operating hours
   getSchedules: (branchId: string): Promise<OperatingHour[]> =>
-    get('/enterprise/schedules/', { branch_id: branchId }),
+    get('/enterprise/schedules/', { params: { branch_id: branchId } }),
 
   upsertSchedule: (branchId: string, payload: Omit<OperatingHour, 'id' | 'branch' | 'is_overnight'>) =>
     post('/enterprise/schedules/', { ...payload, branch_id: branchId }),
@@ -280,7 +280,7 @@ export const enterpriseApi = {
 
   // Closures
   getClosures: (branchId: string): Promise<BranchClosure[]> =>
-    get('/enterprise/closures/', { branch_id: branchId }),
+    get('/enterprise/closures/', { params: { branch_id: branchId } }),
 
   createClosure: (payload: {
     branch_id: string
@@ -307,14 +307,14 @@ export const enterpriseApi = {
     restaurant_id?: string
     branch_id?: string
   }): Promise<EnterpriseConfig[]> =>
-    get('/enterprise/configuration/', params),
+    get('/enterprise/configuration/', { params }),
 
   getEffectiveConfiguration: (params: {
     branch_id?: string
     restaurant_id?: string
     company_id?: string
   }): Promise<EffectiveConfig[]> =>
-    get('/enterprise/configuration/effective/', params),
+    get('/enterprise/configuration/effective/', { params }),
 
   setConfiguration: (payload: {
     configuration_key: string
@@ -348,11 +348,11 @@ export const enterpriseApi = {
     key?: string
     company_id?: string
   }): Promise<ConfigChange[]> =>
-    get('/enterprise/configuration/history/', params),
+    get('/enterprise/configuration/history/', { params }),
 
   // Rollouts
   getRollouts: (restaurantId: string, params?: { status?: string; rollout_type?: string }): Promise<MenuRollout[]> =>
-    get('/enterprise/rollouts/', { restaurant_id: restaurantId, ...params }),
+    get('/enterprise/rollouts/', { params: { restaurant_id: restaurantId, ...params } }),
 
   getRollout: (rolloutId: string): Promise<MenuRollout> =>
     get(`/enterprise/rollouts/${rolloutId}/`),
@@ -385,10 +385,10 @@ export const enterpriseApi = {
 
   // Staff
   getStaff: (restaurantId: string): Promise<StaffAssignment[]> =>
-    get('/enterprise/staff/', { restaurant_id: restaurantId }),
+    get('/enterprise/staff/', { params: { restaurant_id: restaurantId } }),
 
   getAssignments: (branchId: string): Promise<StaffAssignment[]> =>
-    get('/enterprise/staff/assignments/', { branch_id: branchId }),
+    get('/enterprise/staff/assignments/', { params: { branch_id: branchId } }),
 
   assignStaff: (payload: {
     branch_id: string
@@ -401,7 +401,7 @@ export const enterpriseApi = {
     post('/enterprise/staff/assign/', payload),
 
   getTransfers: (restaurantId: string, params?: { status?: string }): Promise<StaffTransfer[]> =>
-    get('/enterprise/staff/transfers/', { restaurant_id: restaurantId, ...params }),
+    get('/enterprise/staff/transfers/', { params: { restaurant_id: restaurantId, ...params } }),
 
   getTransfer: (transferId: string): Promise<StaffTransfer> =>
     get(`/enterprise/staff/transfers/${transferId}/`),
@@ -428,7 +428,7 @@ export const enterpriseApi = {
 
   // Approval Policies
   getApprovalPolicies: (params?: { policy_type?: string; company_id?: string }): Promise<ApprovalPolicy[]> =>
-    get('/enterprise/approval-policies/', params),
+    get('/enterprise/approval-policies/', { params }),
 
   createApprovalPolicy: (payload: {
     policy_type: string
@@ -456,7 +456,7 @@ export const enterpriseApi = {
     restaurant_id?: string
     action?: string
   }): Promise<EnterpriseAuditLog[]> =>
-    get('/enterprise/audit/', params),
+    get('/enterprise/audit/', { params }),
 }
 
 // PUT helper (reuse api pattern)

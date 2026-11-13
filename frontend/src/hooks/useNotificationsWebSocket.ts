@@ -108,7 +108,7 @@ export function useNotificationsWebSocket({
         setStatus('DISCONNECTED')
       }
     }
-  }, [token, enabled, qc]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, enabled, qc])
 
   function handlePayload(payload: NotificationWsEvent | NotificationUnreadCountWsEvent) {
     if (!payload) return
@@ -160,13 +160,15 @@ export function useNotificationsWebSocket({
   }, [connect])
 
   const sendPing = useCallback(() => {
-    wsRef.current?.readyState === WebSocket.OPEN &&
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'ping' }))
+    }
   }, [])
 
   const requestSync = useCallback(() => {
-    wsRef.current?.readyState === WebSocket.OPEN &&
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'sync' }))
+    }
   }, [])
 
   return { status, sendPing, requestSync }

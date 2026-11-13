@@ -59,7 +59,7 @@ export function PurchasesPage() {
     const params: Record<string, string> = {}
     if (filterStatus) params.status = filterStatus
     listPurchaseOrders(params)
-      .then(r => setOrders(r.data))
+      .then(r => setOrders(r))
       .catch(e => setError(e?.response?.data?.message ?? 'Failed to load purchases'))
       .finally(() => setLoading(false))
   }, [filterStatus])
@@ -74,9 +74,9 @@ export function PurchasesPage() {
       listInventoryItems(params),
       listStorageLocations(branchId ? { branch: branchId } : {}),
     ])
-    setSuppliers(sup.data)
-    setInvItems(items.data)
-    setLocations(locs.data)
+    setSuppliers(sup)
+    setInvItems(items)
+    setLocations(locs)
   }, [restaurantId, branchId])
 
   const openCreate = async () => {
@@ -102,7 +102,7 @@ export function PurchasesPage() {
     setLoadingDetail(true)
     try {
       const r = await getPurchaseOrder(id)
-      setSelected(r.data)
+      setSelected(r)
     } catch { /* ignore */ }
     setLoadingDetail(false)
   }

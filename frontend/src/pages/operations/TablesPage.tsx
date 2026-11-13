@@ -48,7 +48,7 @@ export function TablesPage() {
   const load = () => {
     setLoading(true)
     getOperationalTables()
-      .then(r => setTables(r.data))
+      .then(r => setTables(r))
       .catch(() => setError('Failed to load tables'))
       .finally(() => setLoading(false))
   }

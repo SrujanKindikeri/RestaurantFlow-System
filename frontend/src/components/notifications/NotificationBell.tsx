@@ -8,7 +8,7 @@
 //   - "Mark all read" and "View all" actions
 // =============================================================================
 
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUnreadCount, useNotifications, useMarkRead, useMarkAllRead } from '@/hooks/useNotifications'
 import { cn } from '@/utils/cn'
@@ -81,7 +81,7 @@ function NotificationRow({
 // ---------------------------------------------------------------------------
 // Bell button + dropdown
 // ---------------------------------------------------------------------------
-export function NotificationBell() {
+export const NotificationBell = React.memo(function NotificationBell() {
   const [open, setOpen]       = useState(false)
   const dropdownRef           = useRef<HTMLDivElement>(null)
   const navigate              = useNavigate()
@@ -216,4 +216,4 @@ export function NotificationBell() {
       )}
     </div>
   )
-}
+})

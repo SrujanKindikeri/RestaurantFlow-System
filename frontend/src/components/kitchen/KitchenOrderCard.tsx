@@ -3,7 +3,7 @@
 // Phase 7: KDS order card displayed in each status column
 // =============================================================================
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { cn } from '@/utils/cn'
 import { KitchenOrderTimer } from './KitchenOrderTimer'
 import { KitchenPriorityBadge, KitchenPriorityControl } from './KitchenPriorityBadge'
@@ -87,7 +87,7 @@ function OrderItemRow({ item, onStart, onReady }: {
   )
 }
 
-export function KitchenOrderCard({
+export const KitchenOrderCard = React.memo(function KitchenOrderCard({
   order,
   onAccept,
   onStart,
@@ -254,4 +254,4 @@ export function KitchenOrderCard({
       </footer>
     </article>
   )
-}
+})

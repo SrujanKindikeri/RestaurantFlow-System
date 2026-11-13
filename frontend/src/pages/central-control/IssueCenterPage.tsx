@@ -27,7 +27,7 @@ const STATUS_COLORS: Record<string, string> = {
 function IssueRow({ issue, onAction }: { issue: CentralIssue; onAction: () => void }) {
   const [loading, setLoading] = useState(false)
 
-  const act = async (fn: () => Promise<void>) => {
+  const act = async (fn: () => Promise<unknown>) => {
     setLoading(true)
     try { await fn(); onAction() } catch { /* ignore */ } finally { setLoading(false) }
   }

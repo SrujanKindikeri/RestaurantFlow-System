@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { listInventoryItems, listCategories, createInventoryItem, updateInventoryItem } from '@/services/inventory'
 import type { InventoryItem, InventoryCategory, UnitOfMeasurement, CreateInventoryItemPayload } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
+import { useDebounce } from '@/hooks/useDebounce'
 
 const UNITS: UnitOfMeasurement[] = ['KG', 'GRAM', 'LITRE', 'MILLILITRE', 'PIECE', 'PACK', 'BOX', 'BOTTLE', 'DOZEN']
 
@@ -28,6 +29,8 @@ export function InventoryItemsPage() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  const debouncedSearch = useDebounce(search, 300)
+
   // Infer restaurant from user scope (first restaurant in scope)
   const restaurantId = user?.scope?.roles?.[0]?.restaurant?.id ?? ''
 
@@ -42,19 +45,19 @@ export function InventoryItemsPage() {
   const load = useCallback(() => {
     setLoading(true)
     const params: Record<string, string> = {}
-    if (search) params.search = search
+    if (debouncedSearch) params.search = debouncedSearch
     if (filterCategory) params.category = filterCategory
     Promise.all([
       listInventoryItems(params),
       listCategories(restaurantId ? { restaurant: restaurantId } : {}),
     ])
       .then(([itemsRes, catsRes]) => {
-        setItems(itemsRes.data)
-        setCategories(catsRes.data)
+        setItems(itemsRes)
+        setCategories(catsRes)
       })
       .catch(e => setError(e?.response?.data?.message ?? 'Failed to load items'))
       .finally(() => setLoading(false))
-  }, [search, filterCategory, restaurantId])
+  }, [debouncedSearch, filterCategory, restaurantId])
 
   useEffect(() => { load() }, [load])
 

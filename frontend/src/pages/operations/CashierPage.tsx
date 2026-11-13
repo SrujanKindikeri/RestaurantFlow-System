@@ -24,9 +24,9 @@ export function CashierPage() {
         getPOSSessions(),
         listOrders({ status: 'ON_HOLD' }),
       ])
-      setDashboard(dashRes.data)
-      setSession(sessionRes.data.find((s: any) => s.status === 'ACTIVE'))
-      setHeldOrders(ordersRes.data.results ?? ordersRes.data)
+      setDashboard(dashRes)
+      setSession(sessionRes.find((s: any) => s.status === 'ACTIVE'))
+      setHeldOrders((ordersRes as any).results ?? ordersRes)
     } catch {
       setError('Failed to load cashier data')
     } finally {

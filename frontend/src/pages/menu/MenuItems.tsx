@@ -19,6 +19,7 @@ import { Modal, ConfirmDialog } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { MenuItemForm } from './MenuItemForm'
+import { useDebounce } from '@/hooks/useDebounce'
 import type { MenuItem, MenuItemCreatePayload, MenuItemUpdatePayload, FoodType } from '@/types'
 
 const FOOD_TYPE_COLORS: Record<FoodType, string> = {
@@ -49,12 +50,14 @@ export function MenuItems() {
     item: MenuItem
   } | null>(null)
 
+  const debouncedSearch = useDebounce(search, 300)
+
   const params: Record<string, string | number> = {}
   if (restaurantFilter) params.restaurant = restaurantFilter
   if (categoryFilter) params.category = categoryFilter
   if (foodTypeFilter) params.food_type = foodTypeFilter
   if (activeFilter !== '') params.is_active = activeFilter
-  if (search) params.search = search
+  if (debouncedSearch) params.search = debouncedSearch
 
   const { data, isLoading, isError } = useMenuItems(params)
   const { data: restaurantsData } = useRestaurants()

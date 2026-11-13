@@ -292,7 +292,8 @@ const REPORTING_PERMS = new Set([
   'reporting.dashboard.view', 'reporting.sales.view', 'reporting.orders.view',
   'reporting.menu.view', 'reporting.payment.view', 'reporting.kitchen.view',
   'reporting.inventory.view', 'reporting.expense.view', 'reporting.branch.view',
-])const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
+])
+const MENU_PERMS = new Set(['menu.view', 'category.view', 'menu.price.view', 'menu.availability.view', 'tax.view'])
 const ORDER_PERMS = new Set(['table.view', 'order.view.branch', 'order.create.dine_in', 'order.create.counter', 'order.create.takeaway'])
 const KITCHEN_PERMS = new Set(['kitchen.view', 'kitchen.view_history'])
 const BILLING_PERMS = new Set(['bill.view', 'bill.correction.request'])
@@ -629,7 +630,11 @@ export function MainLayout() {
                 ))}
               </ul>
             </>
-          )}ray-700 uppercase tracking-widest">
+          )}
+          {/* Phase 12 — Financials section */}
+          {visibleItems.some(i => FINANCIAL_PERMS.has(i.permission ?? '')) && (
+            <>
+              <p className="px-2 mt-4 mb-2 text-[10px] font-semibold text-gray-700 uppercase tracking-widest">
                 Financials
               </p>
               <ul className="space-y-0.5" role="list">

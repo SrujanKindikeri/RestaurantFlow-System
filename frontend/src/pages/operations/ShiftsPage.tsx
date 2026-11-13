@@ -33,7 +33,7 @@ export function ShiftsPage() {
   const load = () => {
     setLoading(true)
     listShifts()
-      .then(r => setShifts(r.data))
+      .then(r => setShifts(r))
       .catch(() => setError('Failed to load shifts'))
       .finally(() => setLoading(false))
   }

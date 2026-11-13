@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import crmApi, { Customer } from '@/services/crm'
+import { useDebounce } from '@/hooks/useDebounce'
 
 function StatusBadge({ active, blocked }: { active: boolean; blocked: boolean }) {
   if (blocked) return <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700">Blocked</span>
@@ -26,13 +27,14 @@ export function CustomerListPage() {
   const [totalCount, setTotalCount] = useState(0)
 
   const PAGE_SIZE = 20
+  const debouncedSearch = useDebounce(search, 300)
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
       const params: Record<string, string> = { page: String(page) }
-      if (search) params.search = search
+      if (debouncedSearch) params.search = debouncedSearch
       const res = await crmApi.listCustomers(params)
       setCustomers(res.data.results)
       setTotalCount(res.data.count)
@@ -41,7 +43,7 @@ export function CustomerListPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, search])
+  }, [page, debouncedSearch])
 
   useEffect(() => { fetchCustomers() }, [fetchCustomers])
 

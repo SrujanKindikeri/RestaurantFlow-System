@@ -136,7 +136,7 @@ export function ExpenseDetailPage() {
             { label: 'Vendor', value: expense.vendor_name || '—' },
             { label: 'Vendor Ref', value: expense.vendor_reference || '—' },
             { label: 'Branch', value: expense.branch_name ?? 'Restaurant-level' },
-            { label: 'Created By', value: expense.created_by_detail?.email ?? '—' },
+            { label: 'Created By', value: expense.created_by_email ?? '—' },
           ].map(({ label, value }) => (
             <div key={label} className="px-5 py-3">
               <p className="text-xs text-gray-500 mb-0.5">{label}</p>
