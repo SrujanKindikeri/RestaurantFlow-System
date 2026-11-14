@@ -79,6 +79,7 @@ export function OrganizationForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (loading) return
     if (!validate()) return
     setLoading(true)
     try {
@@ -186,10 +187,10 @@ export function OrganizationForm({
 
       {/* Footer */}
       <div className="mt-6 flex justify-end gap-3">
-        <Button type="button" variant="ghost" onClick={onCancel}>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary" loading={loading}>
+        <Button type="submit" variant="primary" loading={loading} disabled={loading}>
           {submitLabel}
         </Button>
       </div>

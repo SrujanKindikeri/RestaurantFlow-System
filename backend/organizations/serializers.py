@@ -239,8 +239,17 @@ class RestaurantDetailSerializer(RestaurantSerializer):
 class OrganizationSerializer(serializers.ModelSerializer):
     """Flat Organization list representation."""
 
-    restaurant_count = serializers.IntegerField(read_only=True)
-    active_restaurant_count = serializers.IntegerField(read_only=True)
+    # Use SerializerMethodField to avoid name clash with model @property attributes.
+    # The queryset annotates as restaurant_count_annotated / active_restaurant_count_annotated
+    # so the ORM never tries to setattr over the read-only property.
+    restaurant_count = serializers.SerializerMethodField()
+    active_restaurant_count = serializers.SerializerMethodField()
+
+    def get_restaurant_count(self, obj):
+        return getattr(obj, "restaurant_count_annotated", None) or obj.restaurant_count
+
+    def get_active_restaurant_count(self, obj):
+        return getattr(obj, "active_restaurant_count_annotated", None) or obj.active_restaurant_count
 
     class Meta:
         model = Organization
