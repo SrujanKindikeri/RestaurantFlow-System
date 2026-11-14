@@ -294,6 +294,9 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
+# Phase 23 — CSRF trusted origins (required for DRF session auth and Django admin behind a proxy)
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if os.getenv("CSRF_TRUSTED_ORIGINS") else []
+
 # -----------------------------------------------------------------------------
 # Django Channels (WebSocket-ready foundation)
 # -----------------------------------------------------------------------------

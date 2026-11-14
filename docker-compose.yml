@@ -2,9 +2,8 @@
 # RestaurantFlow — docker-compose.yml
 # Phase 1: PostgreSQL + Redis only
 # Phase 21: Security hardening — Redis password support, no insecure defaults
+# Phase 23: Removed obsolete version attribute (Docker Compose v2+)
 # =============================================================================
-
-version: "3.9"
 
 services:
 

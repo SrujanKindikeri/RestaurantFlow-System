@@ -1,0 +1,140 @@
+# =============================================================================
+# RestaurantFlow — docker-compose.prod.yml
+# Phase 23: Production overlay — adds backend, Celery, Nginx; removes host
+# port mappings for postgres and redis.
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Requires: deployment/environment/.env.prod (copy from .env.prod.example)
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — override: remove host-exposed port in production
+  # ---------------------------------------------------------------------------
+  postgres:
+    ports: []
+
+  # ---------------------------------------------------------------------------
+  # Redis — override: remove host-exposed port in production
+  # ---------------------------------------------------------------------------
+  redis:
+    ports: []
+
+  # ---------------------------------------------------------------------------
+  # Backend — Django / Uvicorn ASGI
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ghcr.io/${GHCR_OWNER:-restaurantflow}/restaurantflow-backend:${IMAGE_TAG:-latest}
+    command: >
+      uvicorn config.asgi:application
+      --host 0.0.0.0
+      --port 8000
+      --workers 2
+      --worker-class uvicorn.workers.UvicornWorker
+    env_file:
+      - path: ./deployment/environment/.env.prod
+        required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    expose:
+      - "8000"
+    volumes:
+      - static_files:/app/staticfiles
+      - media_files:/app/mediafiles
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ---------------------------------------------------------------------------
+  # Celery worker
+  # ---------------------------------------------------------------------------
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ghcr.io/${GHCR_OWNER:-restaurantflow}/restaurantflow-backend:${IMAGE_TAG:-latest}
+    command: >
+      celery -A config worker
+      --loglevel=info
+      --queues=default,notifications,maintenance
+    env_file:
+      - path: ./deployment/environment/.env.prod
+        required: false
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Celery beat — only ONE instance; never scale this service
+  # ---------------------------------------------------------------------------
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ghcr.io/${GHCR_OWNER:-restaurantflow}/restaurantflow-backend:${IMAGE_TAG:-latest}
+    command: >
+      celery -A config beat
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler
+      --loglevel=info
+    env_file:
+      - path: ./deployment/environment/.env.prod
+        required: false
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Nginx — TLS termination + reverse proxy + SPA serving
+  # ---------------------------------------------------------------------------
+  nginx:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_WS_URL: ${VITE_WS_URL}
+        VITE_APP_NAME: ${VITE_APP_NAME:-RestaurantFlow}
+    image: ghcr.io/${GHCR_OWNER:-restaurantflow}/restaurantflow-frontend:${IMAGE_TAG:-latest}
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    volumes:
+      - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deployment/nginx/ssl:/etc/nginx/ssl:ro
+      - media_files:/vol/media:ro
+
+# =============================================================================
+# Named volumes (extend base volumes)
+# =============================================================================
+volumes:
+  static_files:
+  media_files:

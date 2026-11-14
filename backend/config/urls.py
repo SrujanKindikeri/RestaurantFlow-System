@@ -6,8 +6,14 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from common.views_health import health_live, health_ready
 
 urlpatterns = [
+    # Phase 23 — Health check endpoints (no authentication required)
+    path("health/", health_live),
+    path("health/live/", health_live),
+    path("health/ready/", health_ready),
+
     # Admin — URL prefix configurable via ADMIN_URL_PREFIX env var for
     # security-by-obscurity in production (does not replace auth controls).
     path(f"{settings.ADMIN_URL_PREFIX}/", admin.site.urls),
