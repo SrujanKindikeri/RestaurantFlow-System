@@ -41,8 +41,8 @@ export const getInventoryDashboard = () =>
 // Categories
 // ---------------------------------------------------------------------------
 
-export const listCategories = (params?: Record<string, string>) =>
-  get<InventoryCategory[]>('/inventory/categories/', { params })
+export const listCategories = (params?: Record<string, string>, signal?: AbortSignal) =>
+  get<InventoryCategory[]>('/inventory/categories/', { params, signal })
 
 export const createCategory = (data: CreateInventoryCategoryPayload) =>
   post<InventoryCategory>('/inventory/categories/', data)
@@ -57,8 +57,8 @@ export const updateCategory = (id: string, data: Partial<CreateInventoryCategory
 // Inventory Items
 // ---------------------------------------------------------------------------
 
-export const listInventoryItems = (params?: Record<string, string>) =>
-  get<InventoryItem[]>('/inventory/items/', { params })
+export const listInventoryItems = (params?: Record<string, string>, signal?: AbortSignal) =>
+  get<InventoryItem[]>('/inventory/items/', { params, signal })
 
 export const createInventoryItem = (data: CreateInventoryItemPayload) =>
   post<InventoryItem>('/inventory/items/', data)

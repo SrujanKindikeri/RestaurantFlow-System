@@ -179,8 +179,8 @@ export interface PaginatedResponse<T> {
 
 export const crmApi = {
   // List / search
-  listCustomers: (params?: Record<string, string>) =>
-    api.get<PaginatedResponse<Customer>>('/crm/customers/', { params }),
+  listCustomers: (params?: Record<string, string>, signal?: AbortSignal) =>
+    api.get<PaginatedResponse<Customer>>('/crm/customers/', { params, signal }),
 
   searchCustomers: (q: string, restaurantId?: string) =>
     api.get<{ results: CustomerSearchResult[] }>('/crm/customers/search/', {

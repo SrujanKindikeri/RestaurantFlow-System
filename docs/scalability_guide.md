@@ -283,3 +283,121 @@ Before scaling out:
 - [ ] Celery Beat started (exactly one instance)
 - [ ] PgBouncer configured if `max_connections` pressure expected
 - [ ] Load balancer health check pointing to `/api/health/` or similar
+
+---
+
+## Frontend Performance
+
+*Added in Phase 22 — FEAT-003. Full scalability guide to be completed in FEAT-005.*
+
+### Optimisations Applied
+
+#### 1. Route-level lazy loading (`src/App.tsx`)
+
+All page-level components except `LoginPage`, `RegisterPage`, `DashboardPage`, and `NotFoundPage`
+are imported with `React.lazy`. Auth pages are eager because they are the first view on a cold
+load. The `Suspense` fallback was updated from a plain text string to a `RouteLoadingSkeleton`
+component (animated spinner + pulse bars) for a better perceived loading experience.
+
+**Files changed**: `frontend/src/App.tsx`
+
+---
+
+#### 2. `React.memo` on expensive pure components
+
+Components that receive stable props but sit inside a parent that re-renders frequently were
+wrapped with `React.memo`. On the kitchen board, each status column re-renders every time an
+order in *any* column changes status; `React.memo` prevents the unchanged columns from diffing
+their subtrees.
+
+| Component | File | Reason |
+|---|---|---|
+| `TableCard` | `components/orders/TableCard.tsx` | Rendered in a grid; only the clicked/changed card should update |
+| `TableGrid` | `components/orders/TableGrid.tsx` | Contains 10–50 `TableCard` elements; re-mounts are expensive |
+| `KitchenStatusColumn` | `components/kitchen/KitchenStatusColumn.tsx` | Five columns on the KDS board; each should be independent |
+| `KitchenOrderCard` | `components/kitchen/KitchenOrderCard.tsx` | Already memoized in a prior phase |
+| `MenuItemCard` | `components/orders/MenuItemCard.tsx` | Already memoized in a prior phase |
+| `StatCard` | `components/ui/StatCard.tsx` | Already memoized in a prior phase |
+
+---
+
+#### 3. Debounced search inputs (300 ms)
+
+Search inputs that immediately trigger an API call on every keystroke were updated to route
+through the existing `useDebounce(value, 300)` hook before the value is passed to the data-
+fetching hook or callback.
+
+| Page | File | Change |
+|---|---|---|
+| Users list | `pages/users/UsersListPage.tsx` | Added `useDebounce` before `useUsers({ search: debouncedSearch })` |
+| Bill list | `pages/billing/BillListPage.tsx` | Added `useDebounce` for `bill_number` and `order_number` text inputs |
+| Menu items | `pages/menu/MenuItems.tsx` | Already debounced (no change) |
+| Inventory items | `pages/inventory/InventoryItemsPage.tsx` | Already debounced (no change) |
+| Customer list | `pages/crm/CustomerListPage.tsx` | Already debounced (no change) |
+
+---
+
+#### 4. Virtualisation
+
+**Finding**: Neither `react-window` nor `react-virtual` is in `package.json`. All paginated
+tables in the application use server-side pagination with a default page size of 20. The largest
+in-memory list is the inventory items table, which calls `listInventoryItems` and renders
+whatever the server returns. Under normal operating conditions (< 200 items per restaurant) this
+is below the threshold where virtualisation provides a measurable benefit.
+
+**Decision**: No virtualisation added. If a deployment grows to restaurants with > 500 inventory
+items and the page starts showing visible jank, add `react-window` to `package.json` and wire
+`FixedSizeList` into `InventoryItemsPage` and `MenuItems`.
+
+---
+
+#### 5. `AbortController`-based request cancellation
+
+`useEffect` hooks that issue fetch/axios calls now create an `AbortController` and pass its
+`signal` to the service function. The cleanup function calls `controller.abort()` so that if the
+component unmounts or its dependency changes before the request resolves, the in-flight request
+is cancelled and stale state updates are skipped.
+
+| File | Signal passed via |
+|---|---|
+| `pages/billing/BillListPage.tsx` | `listBills(params, controller.signal)` |
+| `pages/billing/BillingDashboard.tsx` | `listBills({ page: 1 }, controller.signal)` |
+| `pages/crm/CustomerListPage.tsx` | `crmApi.listCustomers(params, controller.signal)` |
+| `pages/inventory/InventoryItemsPage.tsx` | `listInventoryItems(params, signal)` + `listCategories(params, signal)` |
+| `pages/central-control/SystemHealthPage.tsx` | `centralControlApi.getSystemHealth(signal)` — also cancels interval fetches |
+| `pages/central-control/RestaurantHealthPage.tsx` | `centralControlApi.getRestaurantHealth(undefined, signal)` |
+
+Service functions updated to accept `signal?: AbortSignal`:
+- `services/billing.ts` — `listBills`
+- `services/crm.ts` — `listCustomers`
+- `services/inventory.ts` — `listInventoryItems`, `listCategories`
+- `services/centralControl.ts` — `getSystemHealth`, `getRestaurantHealth`
+
+---
+
+#### 6. Vite chunk splitting (`vite.config.ts`)
+
+`manualChunks` was already present. The configuration was updated to separate `react` / `react-dom`
+into a `vendor` chunk and `react-router-dom` into a `router` chunk. This allows the browser to
+cache them independently — the router chunk changes on React Router upgrades while the React core
+chunk stays stable across releases.
+
+| Chunk | Libraries |
+|---|---|
+| `vendor` | `react`, `react-dom` |
+| `router` | `react-router-dom` |
+| `vendor-query` | `@tanstack/react-query` |
+| `vendor-charts` | `recharts` |
+
+**File changed**: `frontend/vite.config.ts`
+
+---
+
+#### 7. Loading skeletons
+
+| Location | Before | After |
+|---|---|---|
+| Route `Suspense` fallback (`App.tsx`) | Plain `"Loading..."` text | `RouteLoadingSkeleton` — spinner + two pulse bars |
+| Billing Dashboard recent bills list | `"Loading…"` text string | Four `Skeleton` rows (`h-14`) |
+| `StatCard` | Already had `animate-pulse` placeholder | No change |
+| Order list / Bill list / Inventory items | Already used `Skeleton` rows | No change |

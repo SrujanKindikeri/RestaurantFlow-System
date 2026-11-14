@@ -13,6 +13,7 @@ import { useUsers, useDisableUser, useReactivateUser } from '@/hooks/useUsers'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { ConfirmDialog } from '@/components/ui/Modal'
+import { useDebounce } from '@/hooks/useDebounce'
 import type { User } from '@/types'
 import { cn } from '@/utils/cn'
 
@@ -45,7 +46,8 @@ export function UsersListPage() {
   const [confirmUser, setConfirmUser] = useState<User | null>(null)
   const [confirmAction, setConfirmAction] = useState<'disable' | 'reactivate' | null>(null)
 
-  const { data, isLoading, error } = useUsers({ search: search || undefined })
+  const debouncedSearch = useDebounce(search, 300)
+  const { data, isLoading, error } = useUsers({ search: debouncedSearch || undefined })
   const disableMutation = useDisableUser()
   const reactivateMutation = useReactivateUser()
 

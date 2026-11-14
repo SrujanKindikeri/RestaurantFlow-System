@@ -64,23 +64,32 @@ export function SystemHealthPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await centralControlApi.getSystemHealth()
+      const res = await centralControlApi.getSystemHealth(signal)
       setHealth(res)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load health data.')
+      if ((err as { code?: string })?.code !== 'ERR_CANCELED') {
+        setError(err instanceof Error ? err.message : 'Failed to load health data.')
+      }
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    load()
-    const interval = setInterval(load, 120_000) // refresh every 2 min
-    return () => clearInterval(interval)
+    const controller = new AbortController()
+    load(controller.signal)
+    const interval = setInterval(() => {
+      const c = new AbortController()
+      load(c.signal)
+    }, 120_000) // refresh every 2 min
+    return () => {
+      controller.abort()
+      clearInterval(interval)
+    }
   }, [load])
 
   const components: Array<{ key: keyof SystemHealth; name: string; description: string }> = [
@@ -113,7 +122,7 @@ export function SystemHealthPage() {
             </div>
           )}
           <button
-            onClick={load}
+            onClick={() => load()}
             disabled={loading}
             className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 
                        rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 

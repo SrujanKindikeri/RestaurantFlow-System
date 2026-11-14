@@ -25,8 +25,8 @@ import type {
 // ---------------------------------------------------------------------------
 
 /** GET /api/billing/bills/ */
-export const listBills = (params?: BillListParams) =>
-  get<PaginatedResponse<BillSummary>>('/billing/bills/', { params })
+export const listBills = (params?: BillListParams, signal?: AbortSignal) =>
+  get<PaginatedResponse<BillSummary>>('/billing/bills/', { params, signal })
 
 /** POST /api/billing/bills/from-order/{order_id}/ */
 export const createBillFromOrder = (orderId: string) =>

@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { listBills } from '@/services/billing'
 import { BillStatusBadge } from '@/components/billing/BillStatusBadge'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { useAuth } from '@/contexts/AuthContext'
 import type { BillSummary } from '@/types'
 
@@ -37,8 +38,9 @@ export function BillingDashboard() {
   const canCreate = user?.scope?.permissions?.includes('bill.create')
 
   useEffect(() => {
+    const controller = new AbortController()
     setLoading(true)
-    listBills({ page: 1 })
+    listBills({ page: 1 }, controller.signal)
       .then((res) => {
         setRecentBills(res.results.slice(0, 8))
         const bills = res.results
@@ -49,8 +51,9 @@ export function BillingDashboard() {
           cancelled: bills.filter((b) => b.status === 'CANCELLED').length,
         })
       })
-      .catch(() => setError('Failed to load billing data.'))
+      .catch((e) => { if (e?.code !== 'ERR_CANCELED') setError('Failed to load billing data.') })
       .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [])
 
   return (
@@ -130,7 +133,11 @@ export function BillingDashboard() {
           <Link to="/billing/bills" className="text-xs text-brand-400 hover:text-brand-300">View all →</Link>
         </div>
         {loading ? (
-          <div className="px-4 py-8 text-center text-gray-500 text-sm">Loading…</div>
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full bg-gray-800" />
+            ))}
+          </div>
         ) : recentBills.length === 0 ? (
           <div className="px-4 py-8 text-center text-gray-500 text-sm">No bills yet.</div>
         ) : (

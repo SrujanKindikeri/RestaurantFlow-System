@@ -25,8 +25,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Core React runtime — loaded on every page
+          'vendor': ['react', 'react-dom'],
+          // Router — separate so non-SPA entry points don't pull it in
+          'router': ['react-router-dom'],
+          // Data-fetching layer
           'vendor-query': ['@tanstack/react-query'],
+          // Charts — largest third-party dependency; defer until a report page loads
           'vendor-charts': ['recharts'],
         },
       },

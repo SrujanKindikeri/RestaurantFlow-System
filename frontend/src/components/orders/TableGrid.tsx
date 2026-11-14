@@ -1,8 +1,10 @@
 // =============================================================================
 // RestaurantFlow — Table Grid Component
 // Phase 6 — Groups tables by section and renders TableCard grid
+// Phase 22 — React.memo to avoid full re-renders when parent state changes
 // =============================================================================
 
+import React from 'react'
 import type { DiningTable } from '@/types'
 import { TableCard } from './TableCard'
 
@@ -12,7 +14,7 @@ interface TableGridProps {
   onSelectTable?: (table: DiningTable) => void
 }
 
-export function TableGrid({ tables, selectedTableId, onSelectTable }: TableGridProps) {
+export const TableGrid = React.memo(function TableGrid({ tables, selectedTableId, onSelectTable }: TableGridProps) {
   // Group tables by section, preserving insertion order
   const sections = tables.reduce<Record<string, DiningTable[]>>((acc, table) => {
     const section = table.section || 'General'
@@ -58,4 +60,4 @@ export function TableGrid({ tables, selectedTableId, onSelectTable }: TableGridP
       ))}
     </div>
   )
-}
+})

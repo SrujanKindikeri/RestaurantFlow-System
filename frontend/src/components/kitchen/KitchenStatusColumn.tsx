@@ -1,8 +1,10 @@
 // =============================================================================
 // RestaurantFlow — Kitchen Status Column
 // Phase 7: One column per status in the KDS board view
+// Phase 22 — React.memo; column only re-renders when its own orders list changes
 // =============================================================================
 
+import React from 'react'
 import { cn } from '@/utils/cn'
 import { KitchenOrderCard } from './KitchenOrderCard'
 import type { KitchenOrder, KitchenOrderStatus, KitchenPriority } from '@/types'
@@ -34,7 +36,7 @@ const COLUMN_CONFIG: Record<KitchenOrderStatus, {
   CANCELLED: { label: 'Cancelled', headerBg: 'bg-gray-900/30',   headerText: 'text-gray-500',   countBg: 'bg-gray-800/60' },
 }
 
-export function KitchenStatusColumn({
+export const KitchenStatusColumn = React.memo(function KitchenStatusColumn({
   status,
   orders,
   onAccept,
@@ -97,4 +99,4 @@ export function KitchenStatusColumn({
       </div>
     </section>
   )
-}
+})

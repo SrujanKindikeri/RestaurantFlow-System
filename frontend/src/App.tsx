@@ -155,9 +155,23 @@ const ExpenseCategoriesPage = React.lazy(() => import('@/pages/financials/Expens
 const SupplierInvoicesPage = React.lazy(() => import('@/pages/financials/SupplierInvoicesPage').then(m => ({ default: m.SupplierInvoicesPage })))
 const PayablesPage = React.lazy(() => import('@/pages/financials/PayablesPage').then(m => ({ default: m.PayablesPage })))
 
+function RouteLoadingSkeleton() {
+  return (
+    <div className="flex items-center justify-center h-screen bg-gray-950">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" aria-hidden="true" />
+        <div className="space-y-2">
+          <div className="h-2 w-32 rounded bg-gray-800 animate-pulse" />
+          <div className="h-2 w-24 rounded bg-gray-800 animate-pulse mx-auto" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   return (
-    <React.Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+    <React.Suspense fallback={<RouteLoadingSkeleton />}>
       <Routes>
         {/* ------------------------------------------------------------------ */}
         {/* Public routes (no auth required)                                    */}

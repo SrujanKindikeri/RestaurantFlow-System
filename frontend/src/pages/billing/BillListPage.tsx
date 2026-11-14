@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { listBills } from '@/services/billing'
 import { BillStatusBadge } from '@/components/billing/BillStatusBadge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useDebounce } from '@/hooks/useDebounce'
 import type { BillSummary, BillStatus, BillListParams, OrderType } from '@/types'
 
 function fmt(v: string) {
@@ -46,24 +47,33 @@ export function BillListPage() {
     date_to: '',
   })
 
+  // Debounce free-text inputs so we don't fire on every keystroke
+  const debouncedBillNumber = useDebounce(filters.bill_number ?? '', 300)
+  const debouncedOrderNumber = useDebounce(filters.order_number ?? '', 300)
+
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
+    const controller = new AbortController()
     const params: BillListParams = { page }
-    if (filters.status)       params.status       = filters.status as BillStatus
-    if (filters.order_type)   params.order_type   = filters.order_type as OrderType
-    if (filters.bill_number)  params.bill_number  = filters.bill_number
-    if (filters.order_number) params.order_number = filters.order_number
-    if (filters.date_from)    params.date_from    = filters.date_from
-    if (filters.date_to)      params.date_to      = filters.date_to
+    if (filters.status)              params.status       = filters.status as BillStatus
+    if (filters.order_type)          params.order_type   = filters.order_type as OrderType
+    if (debouncedBillNumber)         params.bill_number  = debouncedBillNumber
+    if (debouncedOrderNumber)        params.order_number = debouncedOrderNumber
+    if (filters.date_from)           params.date_from    = filters.date_from
+    if (filters.date_to)             params.date_to      = filters.date_to
 
-    listBills(params)
+    listBills(params, controller.signal)
       .then((r) => { setBills(r.results); setCount(r.count) })
-      .catch(() => setError('Failed to load bills.'))
+      .catch((e) => { if (e?.code !== 'ERR_CANCELED') setError('Failed to load bills.') })
       .finally(() => setLoading(false))
-  }, [page, filters])
+    return controller
+  }, [page, filters.status, filters.order_type, debouncedBillNumber, debouncedOrderNumber, filters.date_from, filters.date_to])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    const controller = load()
+    return () => controller.abort()
+  }, [load])
 
   const totalPages = Math.ceil(count / 20) || 1
 

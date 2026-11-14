@@ -3,7 +3,7 @@
 // Phase 10
 // =============================================================================
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { listInventoryItems, listCategories, createInventoryItem, updateInventoryItem } from '@/services/inventory'
 import type { InventoryItem, InventoryCategory, UnitOfMeasurement, CreateInventoryItemPayload } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
@@ -42,24 +42,32 @@ export function InventoryItemsPage() {
     maximum_stock: '0.000',
   })
 
+  const abortRef = useRef<AbortController | null>(null)
+
   const load = useCallback(() => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setLoading(true)
     const params: Record<string, string> = {}
     if (debouncedSearch) params.search = debouncedSearch
     if (filterCategory) params.category = filterCategory
     Promise.all([
-      listInventoryItems(params),
-      listCategories(restaurantId ? { restaurant: restaurantId } : {}),
+      listInventoryItems(params, controller.signal),
+      listCategories(restaurantId ? { restaurant: restaurantId } : {}, controller.signal),
     ])
       .then(([itemsRes, catsRes]) => {
         setItems(itemsRes)
         setCategories(catsRes)
       })
-      .catch(e => setError(e?.response?.data?.message ?? 'Failed to load items'))
+      .catch(e => { if (e?.code !== 'ERR_CANCELED') setError(e?.response?.data?.message ?? 'Failed to load items') })
       .finally(() => setLoading(false))
   }, [debouncedSearch, filterCategory, restaurantId])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    return () => abortRef.current?.abort()
+  }, [load])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

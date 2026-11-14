@@ -166,8 +166,8 @@ export const centralControlApi = {
     get<CentralDashboard>('/central-control/dashboard/', organizationId ? { params: { organization_id: organizationId } } : {}),
 
   // Restaurant health
-  getRestaurantHealth: (organizationId?: string) =>
-    get<{ results: RestaurantHealth[]; count: number }>('/central-control/restaurants/health/', organizationId ? { params: { organization_id: organizationId } } : {}),
+  getRestaurantHealth: (organizationId?: string, signal?: AbortSignal) =>
+    get<{ results: RestaurantHealth[]; count: number }>('/central-control/restaurants/health/', { params: organizationId ? { organization_id: organizationId } : undefined, signal }),
 
   // Restaurants list
   getRestaurants: (params?: Record<string, unknown>) =>
@@ -226,8 +226,8 @@ export const centralControlApi = {
     get<PaginatedResponse<CentralSystemEvent>>('/central-control/events/', params || {}),
 
   // System health
-  getSystemHealth: () =>
-    get<SystemHealth>('/central-control/system-health/', {}),
+  getSystemHealth: (signal?: AbortSignal) =>
+    get<SystemHealth>('/central-control/system-health/', { signal }),
 
   // Settings
   getSettings: () =>

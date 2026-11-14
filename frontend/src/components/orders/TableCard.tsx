@@ -1,8 +1,10 @@
 // =============================================================================
 // RestaurantFlow — Table Card Component
 // Phase 6 — Used in the Tables Dashboard grid
+// Phase 22 — React.memo to prevent re-renders when sibling tables change state
 // =============================================================================
 
+import React from 'react'
 import { cn } from '@/utils/cn'
 import type { DiningTable } from '@/types'
 
@@ -12,7 +14,7 @@ interface TableCardProps {
   selected?: boolean
 }
 
-export function TableCard({ table, onClick, selected }: TableCardProps) {
+export const TableCard = React.memo(function TableCard({ table, onClick, selected }: TableCardProps) {
   const isOccupied = table.is_occupied
   const isInactive = table.status === 'INACTIVE'
 
@@ -85,4 +87,4 @@ export function TableCard({ table, onClick, selected }: TableCardProps) {
       </span>
     </button>
   )
-}
+})

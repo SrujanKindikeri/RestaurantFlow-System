@@ -3,7 +3,7 @@
 // Phase 15
 // =============================================================================
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { centralControlApi, RestaurantHealth } from '@/services/centralControl'
 import { RefreshCw, CheckCircle2, AlertTriangle, XCircle, WifiOff, HelpCircle } from 'lucide-react'
 
@@ -37,21 +37,30 @@ export function RestaurantHealthPage() {
   const [restaurants, setRestaurants] = useState<RestaurantHealth[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const load = useCallback(async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setLoading(true)
     setError(null)
     try {
-      const res = await centralControlApi.getRestaurantHealth()
+      const res = await centralControlApi.getRestaurantHealth(undefined, controller.signal)
       setRestaurants(res.results)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load.')
+      if ((err as { code?: string })?.code !== 'ERR_CANCELED') {
+        setError(err instanceof Error ? err.message : 'Failed to load.')
+      }
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    return () => abortRef.current?.abort()
+  }, [load])
 
   return (
     <main className="p-4 max-w-7xl mx-auto">

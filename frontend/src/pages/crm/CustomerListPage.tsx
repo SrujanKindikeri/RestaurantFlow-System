@@ -3,7 +3,7 @@
 // Phase 17
 // =============================================================================
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import crmApi, { Customer } from '@/services/crm'
@@ -28,24 +28,31 @@ export function CustomerListPage() {
 
   const PAGE_SIZE = 20
   const debouncedSearch = useDebounce(search, 300)
+  const abortRef = useRef<AbortController | null>(null)
 
   const fetchCustomers = useCallback(async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setLoading(true)
     setError('')
     try {
       const params: Record<string, string> = { page: String(page) }
       if (debouncedSearch) params.search = debouncedSearch
-      const res = await crmApi.listCustomers(params)
+      const res = await crmApi.listCustomers(params, controller.signal)
       setCustomers(res.data.results)
       setTotalCount(res.data.count)
-    } catch {
-      setError('Failed to load customers.')
+    } catch (e: unknown) {
+      if ((e as { code?: string })?.code !== 'ERR_CANCELED') setError('Failed to load customers.')
     } finally {
       setLoading(false)
     }
   }, [page, debouncedSearch])
 
-  useEffect(() => { fetchCustomers() }, [fetchCustomers])
+  useEffect(() => {
+    fetchCustomers()
+    return () => abortRef.current?.abort()
+  }, [fetchCustomers])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
