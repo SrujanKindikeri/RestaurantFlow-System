@@ -20,6 +20,7 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts import access as acl
+from common.caching.invalidation import invalidate_menu_catalog
 
 logger = logging.getLogger("menu")
 
@@ -284,6 +285,9 @@ def set_item_active(actor, item, is_active: bool):
         "MenuItem %s set is_active=%s by %s",
         item.pk, is_active, actor.email,
     )
+    # Invalidate catalog for all branches of this restaurant
+    for branch_id in item.restaurant.branches.values_list("pk", flat=True):
+        invalidate_menu_catalog(str(branch_id))
     return item
 
 
@@ -296,6 +300,9 @@ def set_category_active(actor, category, is_active: bool):
         "Category %s set is_active=%s by %s",
         category.pk, is_active, actor.email,
     )
+    # Invalidate catalog for all branches of this restaurant
+    for branch_id in category.restaurant.branches.values_list("pk", flat=True):
+        invalidate_menu_catalog(str(branch_id))
     return category
 
 
@@ -320,4 +327,5 @@ def deactivate_price(actor, price):
         "MenuItemPrice %s deactivated by %s",
         price.pk, actor.email,
     )
+    invalidate_menu_catalog(str(price.branch_id))
     return price

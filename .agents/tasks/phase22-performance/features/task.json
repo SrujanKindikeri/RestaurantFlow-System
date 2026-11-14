@@ -1,0 +1,7 @@
+{
+  "task_id": "task-phase22-performance",
+  "task_description": "Phase 22: Performance, Caching & Scalability Engineering. Wire the existing cache infrastructure into service/view write paths, add missing composite indexes, fix N+1 query patterns, expand frontend performance, build load testing infrastructure, document scalability, verify concurrency guards, and write performance tests.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null
+}

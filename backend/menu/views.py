@@ -559,7 +559,7 @@ class BranchCatalogView(APIView):
         from organizations.models import Branch
         from common.caching.services import CacheService
         from common.caching.keys import menu_catalog_key, make_params_hash
-        from common.caching.policies import add_jitter, MENU_CATALOG_TTL
+        from common.caching.policies import MENU_CATALOG_TTL
 
         try:
             branch = acl.get_accessible_branches(request.user).get(pk=pk)
@@ -568,16 +568,12 @@ class BranchCatalogView(APIView):
 
         params_hash = make_params_hash(**dict(request.query_params))
         cache_key = menu_catalog_key(str(branch.pk), params_hash)
-        cached = CacheService.get(cache_key)
-        if cached is not None:
-            return Response(cached)
 
-        try:
-            catalog = services.get_branch_catalog(branch, request.user)
-        except PermissionDenied as e:
-            raise e
-
-        CacheService.set(cache_key, catalog, add_jitter(MENU_CATALOG_TTL))
+        catalog = CacheService.get_or_set(
+            cache_key,
+            lambda: services.get_branch_catalog(branch, request.user),
+            MENU_CATALOG_TTL,
+        )
         return Response(catalog)
 
 

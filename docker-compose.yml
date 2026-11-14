@@ -1,6 +1,7 @@
 # =============================================================================
 # RestaurantFlow — docker-compose.yml
 # Phase 1: PostgreSQL + Redis only
+# Phase 21: Security hardening — Redis password support, no insecure defaults
 # =============================================================================
 
 version: "3.9"
@@ -17,7 +18,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-restaurantflow}
       POSTGRES_USER: ${DB_USER:-restaurantflow}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
     ports:
       - "5432:5432"
     volumes:
@@ -39,9 +40,14 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    # Phase 21 — Redis requires a password (set via REDIS_PASSWORD env var).
+    # REDIS_URL should include the password: redis://:password@localhost:6379/0
+    command: >
+      sh -c "redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 5

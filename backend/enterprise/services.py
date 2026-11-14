@@ -148,6 +148,11 @@ def set_configuration(
     # Invalidate cache after commit
     ConfigurationResolver.invalidate_cache_for_config(config)
 
+    # Invalidate branch config cache in the common caching layer
+    if branch:
+        from common.caching.invalidation import invalidate_branch_config
+        invalidate_branch_config(str(branch.pk))
+
     audit_action = AUDIT_CONFIG_UPDATED if old_value else AUDIT_CONFIG_CREATED
     record_audit(
         action=audit_action,

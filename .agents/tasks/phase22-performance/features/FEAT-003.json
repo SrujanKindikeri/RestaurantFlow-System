@@ -1,47 +1,26 @@
 {
   "id": "FEAT-003",
   "type": "perf",
-  "description": "API response optimization, pagination enforcement, frontend performance (route lazy loading, component memoization, debounced search). No new state management or virtualised list libraries (react-window/react-virtual not in package.json). Independent of FEAT-001 and FEAT-002.",
+  "description": "Frontend performance: extend Vite code splitting, add React.memo to high-frequency list components, add useDebounce to remaining search inputs, add AbortController to hook-based data fetches, and add loading skeletons. Write docs/frontend_performance.md. No backend changes.",
   "status": "pending",
   "steps": [
-    "1. Enforce max page size on DRF list views. In backend/config/settings.py, set REST_FRAMEWORK['PAGE_SIZE'] to 50 (increase from 20 for balance between UX and load), and add 'MAX_PAGE_SIZE': 100 to REST_FRAMEWORK config. Audit 10 highest-traffic list views (orders, bills, payments, inventory items, notifications, kitchen orders, menu items, customers, staff assignments, reporting exports). If any use custom pagination_class that overrides max_page_size, set it to 100.",
-
-    "2. Create backend/core/pagination.py with a SafePageNumberPagination class that inherits from PageNumberPagination, sets max_page_size=100, and logs a warning when a client requests page_size > max_page_size. Use this as DEFAULT_PAGINATION_CLASS in settings.py REST_FRAMEWORK config instead of the plain PageNumberPagination.",
-
-    "3. Audit backend/reporting/views.py export endpoints (ExportCSVView). These return full result sets as CSV downloads — no pagination. Add a MAX_EXPORT_ROWS constant in reporting/constants.py (set to 10000). In ExportCSVView.get(), after fetching data from the service function, check if row count exceeds MAX_EXPORT_ROWS; if yes, return HTTP 400 with error message: 'Export exceeds maximum row limit. Narrow your date range or filters.' Add a query parameter max_rows for admins to override (if user has reporting.export.unlimited permission, allow up to 50000).",
-
-    "4. Review backend/operations/views.py (POS catalog endpoints). Ensure POS menu catalog endpoint uses the menu catalog cache from FEAT-002 (if FEAT-002 is implemented) or at minimum applies select_related/prefetch_related. If the POS view builds a large nested JSON structure, profile it in code review — if serialization is slow, switch to a flatter structure or pre-aggregate.",
-
-    "5. Frontend route lazy loading. Edit frontend/src/App.tsx: replace all direct page component imports (lines 7-150) with lazy-loaded imports using React.lazy(). Example: change 'import { OrganizationsListPage } from ...' to 'const OrganizationsListPage = React.lazy(() => import(...))'. Wrap the <Routes> block in a <React.Suspense fallback={<div>Loading...</div>}>. Group imports by feature: auth (2 pages), organizations (6 pages), users+roles (3 pages), counters (4 pages), menu (6 pages), tables+orders (4 pages), kitchen (2 pages), billing (5 pages), payments (1 page), inventory (9 pages), recipes (3 pages), central control (5 pages), notifications (2 pages), marketing (5 pages), operations (6 pages), enterprise (8 pages), crm (7 pages), reporting (8 pages), accounting (8 pages), financials (7 pages). Total ~90 lazy-loaded chunks. Keep DashboardPage, LoginPage, RegisterPage eager-loaded (frequently accessed on first visit).",
-
-    "6. Frontend component memoization. Identify top 5 frequently re-rendered components by inspecting props complexity: (a) frontend/src/components/orders/MenuItemCard.tsx — if it receives complex menu item props, wrap export in React.memo((props) => <MenuItemCard {...props} />, (prevProps, nextProps) => prevProps.item.id === nextProps.item.id && prevProps.item.updated_at === nextProps.item.updated_at). (b) frontend/src/components/kitchen/KitchenOrderCard.tsx — wrap in React.memo with shallow equality check on order.id and order.status. (c) frontend/src/components/ui/StatCard.tsx — if rendered in loops on dashboards, wrap in React.memo with shallow props check. (d) frontend/src/components/notifications/NotificationBell.tsx — wrap in React.memo since it renders on every page via MainLayout. (e) frontend/src/components/billing/BillItemsTable.tsx — wrap in React.memo if items array reference changes frequently. Only add memoization where props change less frequently than parent re-renders. Do NOT memo components that receive new callbacks on every render (unless those callbacks are useCallback-wrapped).",
-
-    "7. Debounced search inputs. Create frontend/src/hooks/useDebounce.ts: export a useDebounce(value, delay=300) hook that returns the debounced value after delay ms of inactivity. Find all search input fields: (a) frontend/src/pages/menu/MenuItems.tsx — if there is a search input, wrap its value in useDebounce before passing to the API query. (b) frontend/src/pages/inventory/InventoryItemsPage.tsx — same. (c) frontend/src/pages/crm/CustomerListPage.tsx — same. (d) frontend/src/pages/orders/OrderListPage.tsx — same. (e) Any other list page with a search box. The pattern: const [search, setSearch] = useState(''); const debouncedSearch = useDebounce(search, 300); const query = useOrders({ search: debouncedSearch, ... }); <input value={search} onChange={(e) => setSearch(e.target.value)} />. This prevents firing an API request on every keystroke.",
-
-    "8. Audit frontend/src/hooks/ for duplicate or redundant API calls. Check: useOrders, useBills, usePayments, useMenu, useInventory, useNotifications. Ensure each uses TanStack Query's staleTime and cacheTime appropriately. Set staleTime: 30000 (30s) for relatively static data (menu, categories, branches), staleTime: 5000 (5s) for operational data (orders, bills, kitchen), staleTime: 0 for real-time data (notifications if not using WebSocket). Add these as defaults in the query client configuration in frontend/src/main.tsx: queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30000, cacheTime: 300000, refetchOnWindowFocus: false } } }).",
-
-    "9. Add loading skeletons to 3 high-traffic pages: (a) frontend/src/pages/orders/OrderListPage.tsx — render a skeleton list (5 skeleton cards) while useOrders.isLoading. (b) frontend/src/pages/kitchen/KitchenDashboard.tsx — render skeleton kitchen cards while data is loading. (c) frontend/src/pages/billing/BillListPage.tsx — render skeleton table rows. Create a reusable Skeleton component in frontend/src/components/ui/Skeleton.tsx (a simple animated div with gray gradient).",
-
-    "10. Frontend build optimization. Audit frontend/vite.config.ts. Add build.rollupOptions.output.manualChunks to split large vendor libraries: (a) 'react-vendor': ['react', 'react-dom', 'react-router-dom']. (b) 'query-vendor': ['@tanstack/react-query']. (c) 'chart-vendor': ['recharts']. This prevents a single vendor bundle from exceeding 500 KB."
+    "1. In frontend/vite.config.ts, extend the manualChunks configuration to add: 'vendor-ui': ['lucide-react'], 'feature-kitchen': chunk condition for kitchen pages, 'feature-pos': chunk condition for POS/operations pages, 'feature-reports': chunk condition for reporting pages, 'feature-accounting': chunk condition for accounting pages. Use function-based manualChunks (id: string) => string | undefined to group by directory prefix under src/pages/. The existing vendor-react, vendor-query, vendor-charts chunks stay unchanged.",
+    "2. Add React.memo to the following components that render in large lists and receive stable props: frontend/src/components/ui/StatCard.tsx (already memoized — verify and keep), frontend/src/pages/orders/OrderListPage.tsx row component if one exists, frontend/src/pages/inventory/InventoryItemsPage.tsx row component if one exists, frontend/src/pages/notifications/NotificationCenter.tsx notification row component. Use React.memo() wrapping the export, with explicit prop comparison only if the component has complex object props.",
+    "3. Add useDebounce to every page that has a search input field but does not yet import useDebounce. Find these by searching for onChange handlers on <input> or <Input> elements in src/pages/**/*.tsx that filter API params. Priority pages: frontend/src/pages/billing/BillListPage.tsx, frontend/src/pages/payments/PaymentHistoryPage.tsx, frontend/src/pages/kitchen/KitchenHistory.tsx, frontend/src/pages/inventory/StockHistoryPage.tsx. Pattern: const debouncedSearch = useDebounce(searchInput, 300); use debouncedSearch in the query params object passed to the API hook.",
+    "4. Add AbortController-based request cancellation to the custom hooks in frontend/src/hooks/ that use axios directly (useOrders.ts, useMenu.ts, useReporting.ts, useKitchen.ts, useNotifications.ts). In each hook's useEffect or queryFn, create const controller = new AbortController(); pass { signal: controller.signal } to the axios call; return () => controller.abort() from the useEffect cleanup. For TanStack Query hooks, pass signal from the queryFn's context argument to axios.",
+    "5. Create a SkeletonCard component at frontend/src/components/ui/SkeletonCard.tsx that renders a pulsing placeholder matching the StatCard dimensions (height, border-radius). Create a SkeletonTable component at frontend/src/components/ui/SkeletonTable.tsx that renders N rows of pulsing placeholder cells. Use Tailwind's animate-pulse utility.",
+    "6. Apply SkeletonCard in frontend/src/pages/DashboardPage.tsx: while KPI data is loading (isLoading from TanStack Query), render 4 SkeletonCards instead of StatCards. Apply SkeletonTable in frontend/src/pages/orders/OrderListPage.tsx and frontend/src/pages/billing/BillListPage.tsx while data is loading.",
+    "7. Write frontend/docs/frontend_performance.md documenting: chunk split strategy, which components are memoized and why, debounce usage map, AbortController pattern, skeleton components."
   ],
   "acceptance_criteria": [
-    "REST_FRAMEWORK in settings.py has MAX_PAGE_SIZE=100",
-    "backend/core/pagination.py SafePageNumberPagination class exists and is set as DEFAULT_PAGINATION_CLASS",
-    "reporting/constants.py has MAX_EXPORT_ROWS=10000",
-    "ExportCSVView enforces max row limit with clear error message",
-    "frontend/src/App.tsx uses React.lazy() for all page imports except DashboardPage/LoginPage/RegisterPage",
-    "frontend/src/App.tsx wraps <Routes> in <React.Suspense>",
-    "frontend/src/hooks/useDebounce.ts exists",
-    "At least 3 search-input pages use useDebounce (menu, inventory, crm customers)",
-    "At least 3 components wrapped in React.memo (MenuItemCard, KitchenOrderCard, NotificationBell)",
-    "frontend/src/main.tsx QueryClient config sets staleTime=30000 and refetchOnWindowFocus=false",
-    "frontend/vite.config.ts has build.rollupOptions.output.manualChunks splitting react, query, chart vendors",
-    "frontend/src/components/ui/Skeleton.tsx exists",
-    "cd frontend && npm run build succeeds with no TypeScript errors",
-    "cd frontend && npm run lint returns zero warnings"
+    "npm run build in frontend/ exits 0 with no TypeScript errors",
+    "npm run lint in frontend/ exits 0 with max-warnings 0",
+    "vite build output shows separate chunk files for vendor-ui, feature-kitchen, feature-pos, feature-reports, feature-accounting",
+    "useDebounce is imported in BillListPage.tsx, PaymentHistoryPage.tsx, and at least 2 other pages",
+    "SkeletonCard.tsx and SkeletonTable.tsx exist in frontend/src/components/ui/",
+    "docs/frontend_performance.md exists"
   ],
   "verification": [
-    "cd backend && python manage.py check",
     "cd frontend && npm run build",
     "cd frontend && npm run lint"
   ],

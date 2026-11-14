@@ -706,6 +706,12 @@ def finalize_bill(bill, user) -> "Bill":
         user.email,
     )
 
+    # Invalidate dashboard KPI cache after a bill is finalized
+    from common.caching.invalidation import invalidate_dashboard_kpis
+    restaurant_id = str(locked_bill.branch.restaurant_id)
+    branch_id = str(locked_bill.branch_id)
+    invalidate_dashboard_kpis(restaurant_id, branch_id)
+
     bill.refresh_from_db()
     return bill
 

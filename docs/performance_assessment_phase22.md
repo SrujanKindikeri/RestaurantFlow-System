@@ -1,322 +1,389 @@
-# RestaurantFlow Performance Assessment — Phase 22
+# RestaurantFlow — Phase 22 Performance Assessment
+## Performance, Caching & Scalability Engineering
 
-**Date**: January 2025  
-**Purpose**: Establish baseline performance metrics and document optimization opportunities
-
----
-
-## 1. N+1 Query Patterns Found
-
-### 1.1 OrderListCreateView
-**File**: `backend/orders/views.py`  
-**Issue**: Fetches orders with `.prefetch_related('items')` but does not preload `branch`, `created_by`, `assigned_waiter`, `table`, or `counter` FKs. This causes one query per order to resolve these relationships when serializing.  
-**Impact**: High-traffic view — order lists are accessed frequently from POS terminals and kitchen displays.
-
-### 1.2 BillListView
-**File**: `backend/billing/views.py`  
-**Issue**: Preloads `order`, `branch`, `branch__restaurant`, `created_by`, and `finalized_by` but does not use `.prefetch_related('items__menu_item')` for bill detail displays.  
-**Impact**: Medium — bill listing is less frequent than orders, but still a high-value operation.
-
-### 1.3 Kitchen Order List
-**File**: `backend/kitchen/views.py`  
-**Issue**: No select_related for `order__branch`, `order__table`, `order__counter` on KitchenOrderListView. The detail view already uses select_related correctly.  
-**Impact**: High — KDS (Kitchen Display System) views poll this endpoint frequently.
-
-### 1.4 Inventory Views
-**File**: `backend/inventory/views.py`  
-**Issue**: StockBalance list does not preload `inventory_item__restaurant`, `storage_location__branch`. PurchaseOrder list does not preload `supplier`, `branch`, `restaurant`, `created_by`. StockMovement list does not preload `inventory_item`, `storage_location`, `performed_by`.  
-**Impact**: Medium — accessed during stock checks and receiving operations.
-
-### 1.5 Notification List
-**File**: `backend/notifications/views.py`  
-**Issue**: NotificationRecipient queries returned by `get_notification_recipients_for_user` do not preload `notification.company`, `notification.restaurant`, or `notification.branch`.  
-**Impact**: Medium-high — notifications list is accessed on every page load for unread badge counts.
-
-### 1.6 Enterprise Configuration and Staff Views
-**File**: `backend/enterprise/views.py`  
-**Issue**: EnterpriseConfiguration lists do not select_related `company`, `restaurant`, `branch`. StaffTransfer lists do not select_related `from_branch`, `to_branch`, `requested_by`, `approved_by`.  
-**Impact**: Low-medium — admin/management views accessed less frequently.
-
-### 1.7 Reporting Dashboard
-**File**: `backend/reporting/dashboard_services.py`  
-**Status**: **Already optimized** — uses `.aggregate()`, `.annotate()`, and proper aggregation patterns. No Python-based iteration found.  
-**Verification**: Confirmed aggregation at database level.
+*All measurements marked ESTIMATED are derived from static code analysis without a running server. Measurements marked UNAVAILABLE require a live PostgreSQL instance.*
 
 ---
 
-## 2. Missing Database Indexes
+## 1. API Response Time Baselines
 
-### 2.1 Notification Table
-- **Missing**: Composite index on `(company, notification_type, created_at)` for time-series queries
-- **Missing**: Composite index on `(source_type, source_id)` — **EXISTS** in 0001_initial
-- **Missing**: Composite index on `(restaurant, status, created_at)`
-- **Missing**: Composite index on `(branch, status, created_at)`
+### Method
+`python manage.py check` passes cleanly (config-level, no DB required). Actual timing requires a running server; estimates below are based on query pattern analysis.
 
-### 2.2 NotificationRecipient Table
-- **Missing**: Composite index on `(user, is_read, created_at)` for unread queries — **PARTIAL**: index on `(user, read_at)` exists
-- **Missing**: Composite index on `(notification, user)` — **EXISTS** as unique_together
-
-### 2.3 EnterpriseConfiguration Table
-- **Partial**: Index on `(company, key, effective_from)` exists as `company_config_key_active_idx` but does not include `effective_from`
-- **Missing**: Composite index on `(branch, key, is_active)` — **EXISTS** as `enterprise_config_br_key_active_idx`
-
-### 2.4 StaffBranchAssignment Table
-- **EXISTS**: Index on `(user, branch, is_active)` already declared in 0001_initial
-
-### 2.5 MenuRollout Table
-- **EXISTS**: Index on `(company, status, created_at)` does not exist — table has `restaurant` FK not `company`
-- **EXISTS**: Index on `(restaurant, status)` already declared in 0001_initial
-
-### 2.6 Customer Table (CRM)
-- **Missing**: Composite index on `(restaurant, is_active, created_at)` — **PARTIAL**: `(restaurant, is_active)` exists
-- **Missing**: Standalone index on `email` — **EXISTS** as `crm_cust_email_idx`
-
-### 2.7 LoyaltyAccount Table (CRM)
-- **Missing**: Composite index on `(loyalty_program, points_balance)` for ranking queries
-
-### 2.8 Campaign Table (Marketing)
-- **EXISTS**: Index on `(restaurant, status, start_date)` — **PARTIAL**: `(restaurant, status)` exists
-- **EXISTS**: Index on `(restaurant, status, end_date)` — **PARTIAL**: as above
-
-### 2.9 MenuItemPrice Table
-- **Missing**: Composite index on `(menu_item, branch, effective_from)` — **EXISTS** as `menu_price_item_from_idx`
-- **Missing**: Composite index on `(menu_item, branch, is_active)` — **EXISTS** as `menu_price_item_active_idx`
-
-### 2.10 MenuItemBranch Table
-- **Missing**: Composite index on `(branch, is_available)` for availability queries
-- **Missing**: Composite index on `(menu_item, branch)` — **EXISTS** as unique constraint
-
-**Summary**: Most critical indexes already exist. New migrations will add missing composite indexes for notifications, enterprise, CRM, and marketing tables where they genuinely improve query performance.
+| Endpoint Category | Estimated Latency (cold, no cache) | Primary Risk |
+|---|---|---|
+| POS catalog (`/api/menu/`) | 50–150 ms ESTIMATED | 2–4 joins; `MenuItemBranch.is_available` filter |
+| Order list (`/api/orders/`) | 80–200 ms ESTIMATED | Multiple `SerializerMethodField` traversals |
+| Bill list (`/api/bills/`) | 60–150 ms ESTIMATED | `select_related` present; N+1 on correction counts |
+| Kitchen dashboard (`/ws/kitchen/<branch>/`) | 20–50 ms ESTIMATED (WS connect) | Full KO list on connect |
+| Reporting summary | 200–800 ms ESTIMATED | Multi-table aggregation over `billing.Bill` |
+| Central Control dashboard | 150–400 ms ESTIMATED | Counts across alerts, issues, branches |
+| Inventory overview | 100–300 ms ESTIMATED | `StockBalance` per-item queries |
+| Notifications list | 50–120 ms ESTIMATED | `NotificationRecipient` join per row |
 
 ---
 
-## 3. Existing Cache Usage
+## 2. Database Query Patterns
 
-### 3.1 Reporting Service
-**File**: `backend/reporting/services.py`  
-**Status**: Uses `django.core.cache` for:
-- `sales_trend` (TTL: CACHE_TTL_* from reporting/constants.py)
-- `top_items`
-- `branch` summaries
-- `financial` summaries
+### 2.1 Existing `select_related` / `prefetch_related` Coverage
 
-**Cache Keys**: Scope-aware keys include `user:`, `restaurant:`, `branch:` segments to prevent cross-tenant leakage.
+The codebase applies `select_related` and `prefetch_related` broadly across views. Coverage was confirmed in:
+- `billing/views.py` — `select_related("order__branch", "created_by")`, `prefetch_related("items__menu_item")`
+- `accounting/views.py` — `select_related(...)`, `prefetch_related("lines__account")`
+- `inventory/views.py` — `select_related(...)` on all major list views
+- `orders/views.py` — `prefetch_related("items__menu_item")` on detail views
+- `payments/views.py` — `select_related("bill", "branch")`, `prefetch_related("refunds")`
 
-### 3.2 Dashboard KPIs
-**File**: `backend/reporting/dashboard_services.py`  
-**Status**: `get_dashboard_kpis` uses Redis cache with scope-aware keys. TTL set to `CACHE_TTL_DASHBOARD`.
+### 2.2 Identified N+1 Risk Points
 
-### 3.3 Menu Catalog
-**Status**: **NOT CACHED** — menu items fetched from database on every request.  
-**Opportunity**: Menu catalog changes infrequently; suitable for short-lived cache (60-300s TTL).
+The following patterns carry N+1 risk and are **not yet fully mitigated**:
 
-### 3.4 Notifications List
-**Status**: **NOT CACHED** — notification lists fetched from database on every page load.  
-**Opportunity**: Cache unread count per user with 30s TTL; invalidate on notification create/read.
+| File | Field | Risk |
+|---|---|---|
+| `orders/serializers.py` | `is_occupied` (`SerializerMethodField`) | Calls `sessions.filter(status=OPEN).exists()` per DiningTable row |
+| `orders/serializers.py` | `active_session_id` (`SerializerMethodField`) | Per-row DB query to `TableSession` |
+| `orders/serializers.py` | `item_count` | `self.items.count()` on Order — per-row count query |
+| `orders/serializers.py` | `table_number`, `table_section`, `counter_name`, `counter_code` | Traverses related FK per row without prefetch |
+| `menu/serializers.py` | `active_prices` (`SerializerMethodField`) | Per-row `prices.filter(is_active=True)` |
+| `menu/serializers.py` | `branch_availability` (`SerializerMethodField`) | Per-row `MenuItemBranch` lookup |
+| `kitchen/serializers.py` | `age_seconds` | `SerializerMethodField` — computed but not a DB query |
+| `notifications/selectors.py` | Unread counts | Per-recipient `NotificationRecipient` count |
 
-### 3.5 User Permissions
-**Status**: **NOT CACHED** at application level — Django permissions loaded per request.  
-**Opportunity**: Cache user permission checks (60s TTL) with cache key scoped to `user_id`.
+### 2.3 Slow Query Candidates
 
-### 3.6 Payments, Accounting, Audit
-**Status**: **Correctly NOT CACHED** — financial data should never be stale. PostgreSQL is the authoritative source.
-
----
-
-## 4. Pagination
-
-### 4.1 Global Settings
-**File**: `backend/config/settings.py`  
-**Status**: `REST_FRAMEWORK['PAGE_SIZE'] = 20` set globally.  
-**Issue**: Several list views do not enforce a `MAX` page size cap. A client can request `?page_size=10000` and cause expensive queries.
-
-### 4.2 Vulnerable Views
-- OrderListCreateView
-- BillListView
-- PaymentListView
-- KitchenOrderListView
-- NotificationListView
-
-**Recommendation**: Add `max_page_size = 100` to paginator configuration or enforce in view-level get_queryset.
+| Query Pattern | Model | Reason |
+|---|---|---|
+| `Order.objects.filter(branch=..., status=...)` with `created_at` range | `orders.Order` | Range scan on `created_at` without composite `(branch, status, created_at)` |
+| `StockBalance.objects.filter(storage_location__branch=...)` | `inventory.StockBalance` | No branch-level index; must join through `StorageLocation` |
+| `JournalEntry.objects.filter(restaurant=..., accounting_period=...)` | `accounting.JournalEntry` | Composite `(restaurant, accounting_period)` exists but `entry_date` range may not hit it |
+| `Notification.objects.filter(company=..., source_type=..., source_id=...)` | `notifications.Notification` | Idempotency check on `(source_type, source_id, notification_type)` — no composite index |
+| `Payment.objects.filter(bill=..., status=COMPLETED)` for overpayment guard | `payments.Payment` | Runs inside `transaction.atomic()` during payment creation |
+| Dashboard KPI aggregations over `billing.Bill` for date range | `billing.Bill` | `SUM(grand_total)` groupby `branch` with date filter — no partial index |
 
 ---
 
-## 5. WebSocket Channel Groups
+## 3. Existing Indexes (Complete Inventory)
 
-### 5.1 KitchenConsumer
-**File**: `backend/kitchen/consumers.py`  
-**Group**: `kitchen_{branch_id}`  
-**Scope**: Branch-scoped (correct)  
-**Status**: `_get_current_state` already uses `.select_related('order__branch', 'order__table')` and `.prefetch_related('items__menu_item')`. **Optimization already in place.**
-
-### 5.2 CentralControlConsumer
-**File**: `backend/central_control/consumers.py`  
-**Group**: `company_{org_id}_central_control`  
-**Scope**: Organization-scoped (correct)  
-**Status**: Already uses select_related in state fetch.
-
-### 5.3 NotificationsConsumer
-**File**: `backend/notifications/consumers.py`  
-**Group**: `notifications_user_{user_id}`  
-**Scope**: User-scoped (correct)  
-**Status**: Initial list views do not preload notification FK relationships (see item 1.5).
-
----
-
-## 6. Celery Task Configuration
-
-### 6.1 Task Files Found
-- `backend/notifications/tasks.py`
-- `backend/crm/tasks.py`
-- `backend/marketing/tasks.py`
-
-**Status**: All tasks currently use the default Celery queue. No queue routing configured.
-
-### 6.2 Recommended Queue Configuration
-| Queue | Tasks | Priority | Workers |
-|---|---|---|---|
-| `notifications` | `notifications.*` | High | 2-4 |
-| `maintenance` | `crm.*`, `marketing.*` | Low | 1-2 |
-| `reports` | `reports.*` | Medium | 1-2 |
-| `default` | All others | Medium | 2 |
-
-**Configuration**: Add `CELERY_TASK_ROUTES` to `config/settings.py`.
-
----
-
-## 7. Frontend Performance
-
-### 7.1 App.tsx Component
-**File**: `frontend/src/App.tsx`  
-**Issue**: Imports ~50 page components eagerly at the top level using static `import` statements. This increases initial JavaScript parse time and bundle size.
-
-**Example**:
-```typescript
-import OrderListPage from './pages/orders/OrderListPage';
-import BillListPage from './pages/billing/BillListPage';
-import KitchenDisplayPage from './pages/kitchen/KitchenDisplayPage';
-// ... 47 more imports
+### `orders.Order`
 ```
-
-**Impact**: Initial page load parses all routes even if the user never visits them. Increases Time to Interactive (TTI).
-
-**Recommendation**: Use `React.lazy()` and `Suspense` for code-splitting:
-```typescript
-const OrderListPage = React.lazy(() => import('./pages/orders/OrderListPage'));
+(branch, status)
+(branch, order_type)
+(branch, created_at)
+(order_number)
+(table, status)
+(counter, status)
+(assigned_waiter, status)
+(created_by, status)
+(status, created_at)
+(customer, status)
+(customer, created_at)
 ```
+**Missing:** `(branch, status, created_at)` — needed for time-boxed branch order queries
 
-### 7.2 No Virtualized Lists
-**Status**: `frontend/package.json` does not include `react-window` or `react-virtual`.  
-**Impact**: Long lists (orders, bills, notifications) render all DOM nodes at once, causing jank on scroll.  
-**Recommendation**: Introduce `react-window` for lists exceeding 50 items.
+### `orders.OrderItem`
+```
+(order, menu_item)
+(menu_item)
+```
+**Missing:** no issue — always queried via `order` FK
+
+### `billing.Bill`
+```
+(branch, status)
+(branch, created_at)
+(branch, status, created_at)   ← composite exists ✓
+(status, created_at)
+(bill_number)
+(order)
+(created_by, status)
+```
+Well-indexed.
+
+### `billing.BillItem`
+```
+(bill)
+(order_item)
+(menu_item)
+```
+Adequate for joins.
+
+### `payments.Payment`
+```
+(bill, status)
+(branch, status)
+(branch, created_at)
+(counter, status)
+(counter_session, status)
+(payment_method, status)
+(status, created_at)
+(initiated_by, status)
+(transaction_reference)
+```
+Well-indexed. Overpayment guard locks via `select_for_update()` on Bill.
+
+### `payments.PaymentRefund`
+```
+(payment, status)
+(refund_number)
+(status, requested_at)
+(requested_by, status)
+```
+**Missing:** `(payment, status)` exists. Adequate.
+
+### `inventory.StockBalance`
+```
+(inventory_item, storage_location)
+(storage_location)
+(inventory_item)
+```
+**Missing:** `(storage_location__branch)` — requires join; a branch-level dashboard query must join to `StorageLocation` first
+
+### `inventory.StockMovement`
+```
+(inventory_item, created_at)
+(storage_location, created_at)
+(movement_type, created_at)
+(reference_type, reference_id)
+(performed_by, created_at)
+(created_at)
+```
+Well-indexed.
+
+### `inventory.PurchaseOrder`
+```
+(restaurant, status)
+(branch, status)
+(supplier, status)
+(purchase_number)
+(status, created_at)
+(created_at)
+```
+Adequate.
+
+### `menu.MenuItem`
+```
+(restaurant, is_active)
+(restaurant, category)
+(restaurant, food_type)
+(restaurant, slug)
+(restaurant, sku)
+```
+**Missing:** `(restaurant, is_active, display_order)` — POS catalog query sorts by `display_order`
+
+### `menu.MenuItemPrice`
+```
+(menu_item, branch, is_active)
+(menu_item, branch, effective_from)
+(branch, is_active)
+```
+Adequate for price lookups.
+
+### `kitchen.KitchenOrder`
+```
+(branch, status)
+(branch, priority)
+(branch, received_at)
+(status, priority)
+(status, received_at)
+(branch, status, received_at)  ← composite ✓
+```
+Well-indexed.
+
+### `notifications.Notification`
+```
+(company, created_at)
+(company, notification_type)
+(company, severity)
+(restaurant, created_at)
+(source_type, source_id)
+(notification_type, source_type, source_id)
+```
+**Missing:** `(company, branch, source_type, source_id, notification_type)` — idempotency check runs this filter on every notification creation
+
+### `accounting.JournalEntry`
+```
+(restaurant, entry_date)
+(restaurant, status)
+(restaurant, accounting_period)
+(source_type, source_id)
+(entry_date, status)
+(created_by)
+(branch, entry_date)
+```
+Adequate.
+
+### `financials.Expense`
+```
+(restaurant, status)
+(restaurant, payment_status)
+(branch, status)
+(category, status)
+(expense_date)
+(due_date)
+(created_by)
+(status, created_at)
+(expense_number)
+```
+**Missing:** `(branch, status, expense_date)` — branch manager dashboard queries expenses by branch + status + date range
+
+### `accounts.SecurityAuditLog` / `AuditEvent`
+```
+(event, created_at)
+(actor, created_at)
+(target_user, created_at)
+(organization, created_at)
+(outcome, created_at)
+(ip_address, created_at)
+```
+Adequate for audit queries.
+
+### `operations.OperationalShift`
+```
+(branch, status)
+(branch, started_at)
+```
+Adequate.
 
 ---
 
-## 8. Metrics Unavailable Without Running Environment
+## 4. Cache Usage
 
-The following metrics require a live deployment with realistic data:
+### Existing Cache Infrastructure
+- **Backend:** `django.core.cache.backends.redis.RedisCache` via `REDIS_URL`
+- **Channel layer:** `channels_redis.core.RedisChannelLayer` (separate connection, same Redis instance)
+- `common/caching/` module fully implemented with:
+  - `services.py` — `CacheService.get/set/delete/delete_pattern/get_or_set/get_secure`
+  - `keys.py` — tenant-scoped key builders
+  - `invalidation.py` — `transaction.on_commit()` invalidation functions
+  - `policies.py` — TTL constants with ±15% jitter
 
-### 8.1 API Response Times
-- **p50, p95, p99 latency** for common endpoints
-- **Measurement Tool**: Application Performance Monitoring (APM) — New Relic, Datadog, or Prometheus + Grafana
+### Current Cache Integration Status
 
-### 8.2 Database Query Latency
-- **Slow query log** analysis (queries > 100ms)
-- **EXPLAIN ANALYZE** plans for top 10 queries
-- **Measurement Tool**: `pg_stat_statements` PostgreSQL extension
-
-### 8.3 Cache Hit/Miss Ratios
-- **Redis stats**: `INFO stats` — `keyspace_hits` vs `keyspace_misses`
-- **Measurement Tool**: Redis CLI or monitoring integration
-
-### 8.4 Frontend Bundle Size
-- **Current bundle size**: **UNAVAILABLE** (requires `npm run build` in live environment)
-- **Measurement Tool**: Vite build output, Lighthouse, or Webpack Bundle Analyzer
-
-### 8.5 Memory and CPU Utilization
-- **Django worker memory**: **UNAVAILABLE**
-- **Celery worker memory**: **UNAVAILABLE**
-- **PostgreSQL connection usage**: **UNAVAILABLE**
-- **Measurement Tool**: `docker stats`, `htop`, Prometheus node_exporter
-
-### 8.6 Background Task Execution Times
-- **Celery task duration**: **UNAVAILABLE**
-- **Measurement Tool**: Celery Flower, or `django_celery_results` table queries
-
-### 8.7 WebSocket Connection Behavior
-- **Concurrent connections**: **UNAVAILABLE**
-- **Message throughput**: **UNAVAILABLE**
-- **Measurement Tool**: Django Channels metrics, Redis Pub/Sub monitoring
-
----
-
-## 9. Performance Targets (Initial Engineering Goals)
-
-These targets are initial engineering goals, not guaranteed results. Actual performance depends on hardware, data volume, and deployment configuration.
-
-| Area | Target | Baseline | Status |
+| Resource | Cached? | Key Schema | TTL |
 |---|---|---|---|
-| Simple API reads (e.g., menu list) | p95 < 300ms | **UNMEASURED** | To be benchmarked |
-| Common API writes (e.g., create order) | p95 < 500ms | **UNMEASURED** | To be benchmarked |
-| Dashboard APIs | p95 < 800ms | **UNMEASURED** | To be benchmarked |
-| Database query latency | Optimize slow queries (>100ms) | **UNMEASURED** | Requires `pg_stat_statements` |
-| Frontend initial load | Minimize unused JS | **UNMEASURED** | Requires build + Lighthouse |
-| Cache hit ratio | Establish measurable improvement | **UNMEASURED** | Requires live Redis stats |
-| Error rate | No increase from baseline | **UNMEASURED** | Requires APM |
-| Financial operations | Maintain correctness under concurrency | **ASSUMED CORRECT** | Verified in Phase 8-9 tests |
+| Menu catalog | **Partial** — infrastructure exists, not wired into views | `restaurantflow:branch:{id}:menu_catalog:{hash}` | 300s |
+| Branch config | **Partial** — infrastructure exists, not wired | `restaurantflow:branch:{id}:config:{key}` | 600s |
+| User permissions | **Partial** — infrastructure exists, not wired | `restaurantflow:user:{id}:branch:{id}:permissions` | 300s |
+| Dashboard KPIs | **Not wired** | `restaurantflow:restaurant:{id}:branch:{id}:dashboard_kpi:{date}` | 120s |
+| Reporting summaries | **Not wired** | `restaurantflow:report:{type}:{scope}:{from}:{to}` | 300s |
+| Inventory availability | **Not wired** | `restaurantflow:branch:{id}:inventory:{item_id}` | 60s |
+| Payments | **Never cached** ✓ | — | — |
+| Accounting balances | **Never cached** ✓ | — | — |
+| Audit records | **Never cached** ✓ | — | — |
+
+### Cache Invalidation Hooks
+All invalidation functions exist in `invalidation.py` and use `transaction.on_commit()`. They are **not yet called** from service layer write paths.
 
 ---
 
-## 10. Recommendations Summary
+## 5. Frontend Bundle Configuration
 
-### 10.1 Immediate Wins (Phase 22 Scope)
-1. **Add select_related/prefetch_related** to N+1 patterns (orders, billing, kitchen, inventory, notifications, enterprise)
-2. **Add missing composite indexes** (notifications, enterprise, CRM, marketing)
-3. **Set CONN_MAX_AGE=60** in DATABASES config for connection reuse
-4. **Configure CELERY_TASK_ROUTES** for queue separation
+### Current State (vite.config.ts)
+```
+manualChunks:
+  vendor-react:  [react, react-dom, react-router-dom]
+  vendor-query:  [@tanstack/react-query]
+  vendor-charts: [recharts]
+```
+- All 60+ route pages are already split with `React.lazy()` ✓
+- `Suspense` boundary present in `App.tsx` ✓
+- `useDebounce` hook exists (300ms default) — used in 3 pages only
+- `React.memo` applied on 5 components only (StatCard, MenuItemCard, NotificationBell, BillItemsTable, KitchenOrderCard)
+- No `AbortController` usage found — requests are not cancelled on route change
+- No virtualized list library installed — large tables render all rows
 
-### 10.2 Next Phase Opportunities (Post-Phase 22)
-1. **Frontend code-splitting** with React.lazy/Suspense
-2. **Virtualized lists** with react-window for long lists
-3. **Menu catalog caching** with 60s TTL and invalidation on menu updates
-4. **Unread notification count caching** with 30s TTL
-5. **Max page size enforcement** (cap at 100 items per page)
-6. **PgBouncer** for connection pooling (external deployment component)
-7. **APM integration** for real-time metrics (Prometheus + Grafana)
-
-### 10.3 Not Recommended
-- ❌ **Caching financial data** (payments, accounting, audit) — correctness > performance
-- ❌ **Removing existing indexes** — all current indexes serve legitimate query patterns
-- ❌ **Aggressive denormalization** — normalized schema ensures data consistency
+### Missing Chunks
+No `ui-components` or `feature` chunk groups defined. Lucide icons, recharts, and tailwind utilities are bundled together, increasing initial parse time.
 
 ---
 
-## 11. Conclusion
+## 6. Celery Task Patterns
 
-RestaurantFlow's current architecture is **fundamentally sound**:
-- Reporting services already use database-level aggregation
-- Cache keys are properly scoped to prevent cross-tenant leakage
-- Financial operations remain transactionally correct
-- Most critical indexes already exist
+### Registered Tasks
+| Task | Queue | Idempotent? | Timeout |
+|---|---|---|---|
+| `notifications.dispatch_notification` | `notifications` (via `CELERY_TASK_ROUTES`) | ✓ (NotificationRecipient dedup) | 300s hard / 240s soft |
+| `notifications.retry_pending_deliveries` | `notifications` | ✓ | 300s |
+| `notifications.cleanup_old_notifications` | `notifications` | ✓ | 300s |
+| `crm.expire_loyalty_points` | `maintenance` | ✓ | 300s |
+| `crm.cleanup_expired_redemptions` | `maintenance` | ✓ | 300s |
+| `crm.run_segmentation_all_restaurants` | `maintenance` | ✓ | 300s |
+| `marketing.*` (5 tasks) | `maintenance` | ✓ | 300s |
 
-**Key findings**:
-- N+1 patterns exist in 6-7 high-traffic views
-- 3-5 composite indexes genuinely missing
-- Frontend eager-loads all routes (optimization opportunity)
-- No measurable baseline exists yet (requires live deployment)
+### Queue Routing Status
+`CELERY_TASK_ROUTES` in settings.py routes `notifications.*` → `notifications`, `crm.*` / `marketing.*` → `maintenance`. **Missing routes:** `default` queue unspecified; `reports.*` and `maintenance.*` queue names are defined in routing but no `reports` queue tasks exist yet.
 
-**Phase 22 will address**:
-- Database query optimization (select_related/prefetch_related)
-- Missing index creation (safe, non-duplicate)
-- Connection pooling (CONN_MAX_AGE)
-- Celery queue routing
-- Documentation for future optimization work
-
-**Phase 22 will NOT address**:
-- Frontend code-splitting (requires deeper refactoring)
-- Live metrics collection (requires deployment infrastructure)
-- PgBouncer setup (external component, documented for optional use)
+### Worker Configuration
+No Gunicorn or Celery worker concurrency settings configured in docker-compose or deployment files. `CELERY_TASK_TIME_LIMIT = 300` and `CELERY_TASK_SOFT_TIME_LIMIT = 240` are set globally.
 
 ---
 
-**Next Steps**: Proceed with FEAT-001 implementation — database query optimization and index migrations.
+## 7. WebSocket Group Patterns
+
+| Consumer | Group Name Pattern | Scope |
+|---|---|---|
+| `kitchen/consumers.py` | `kitchen_{branch_id}` | Branch-scoped — all kitchen staff in a branch share one group |
+| `notifications/consumers.py` | `notifications_user_{user_id}` | Per-user — structurally prevents cross-user leakage |
+
+### Payload Analysis
+- Kitchen consumer sends full `KitchenOrder` state on connect (REST sync). Payload size is unbounded; a branch with 100 open kitchen orders serializes all of them on connect.
+- Notification consumer sends `unread_count` on sync — lightweight.
+- Group naming correctly scopes by branch/user. No cross-tenant leakage possible.
+
+---
+
+## 8. Known Bottlenecks
+
+### High Priority
+1. **Menu catalog not cached** — POS catalog endpoint fetches `MenuItem + MenuItemBranch + MenuItemPrice` on every request. At 50 POS terminals across branches, this generates ~3,000 reads/min during peak.
+2. **Dashboard KPI not cached** — `reporting/aggregations.py` runs `Sum(grand_total)` over `billing.Bill` on every dashboard load. No result caching.
+3. **Reporting summaries not cached** — `select_sales_summary()` aggregates `BillItem` rows on every report page load.
+4. **Cache invalidation hooks not wired** — All infrastructure exists but service layer write paths do not call `invalidate_menu_catalog()`, `invalidate_dashboard_kpis()`, etc.
+
+### Medium Priority
+5. **N+1 on DiningTable list** — `is_occupied` and `active_session_id` cause one DB query per table row.
+6. **N+1 on Order list** — `item_count` calls `self.items.count()` per order; not replaced by `annotate(item_count=Count('items'))`.
+7. **Menu serializer N+1** — `active_prices` and `branch_availability` cause 2 queries per MenuItem in list views.
+8. **Kitchen WS payload** — Full kitchen state on connect is unbounded; should be paginated or limited to `status IN (PENDING, ACCEPTED, PREPARING)`.
+9. **No `react-window` / list virtualization** — Inventory, order history, and kitchen tables that return 100+ rows render every DOM node.
+
+### Low Priority
+10. **Frontend search fields** — Only 3 pages use `useDebounce`; 20+ search inputs fire on every keystroke.
+11. **No request cancellation** — AbortController not used; stale requests from rapid navigation accumulate.
+12. **Missing composite indexes** — `(branch, status, created_at)` missing on `Order`; `(branch, status, expense_date)` missing on `Expense`.
+13. **`CONN_MAX_AGE` set to 60** — Good for Gunicorn sync workers, but must be set to `0` if PgBouncer in transaction-pooling mode is added.
+
+---
+
+## 9. Concurrency & Financial Correctness — Current State
+
+| Operation | Mechanism | Status |
+|---|---|---|
+| Order confirmation | `select_for_update()` on Order | ✓ Implemented |
+| Bill finalization | `select_for_update()` on Bill | ✓ Implemented |
+| Payment creation | `select_for_update()` on Bill (overpayment guard) | ✓ Implemented |
+| Payment number generation | `select_for_update()` on `PaymentSequence` | ✓ Implemented |
+| Refund processing | `select_for_update()` on `PaymentRefund` | ✓ Implemented |
+| Inventory deduction | `select_for_update()` on `StockBalance` | ✓ Implemented |
+| Inventory transfer | `select_for_update()` on source + destination `StockBalance` | ✓ Implemented |
+| Recipe consumption | `select_for_update()` on `StockBalance` | ✓ Implemented |
+| Accounting posting | `transaction.atomic()` with balance invariant check | ✓ Implemented |
+| Accounting reversal | `select_for_update()` on `JournalEntry` | ✓ Implemented |
+| Bill sequence (number gen) | `select_for_update()` on `BillSequence` | ✓ Implemented |
+| Order sequence (number gen) | `select_for_update()` on `OrderSequence` | ✓ Implemented |
+
+Existing tests: `backend/tests/test_concurrency.py` covers concurrent payment on the same bill. Inventory concurrent deduction and transfer tests not yet written.
+
+---
+
+## 10. Infrastructure Summary
+
+| Component | Current Config | Phase 22 Gap |
+|---|---|---|
+| PostgreSQL | 15-alpine, `CONN_MAX_AGE=60` | No PgBouncer; `CONN_MAX_AGE` must be `0` with transaction-pooling PgBouncer |
+| Redis | 7-alpine, `appendonly yes`, password-protected | No `maxmemory` / `maxmemory-policy` set |
+| Celery | Auto-discovered tasks, beat on DB scheduler | Workers not configured in docker-compose |
+| Gunicorn | Not in docker-compose (dev uses `runserver`) | No worker/thread config documented |
+| Nginx | No nginx service in docker-compose | Not present |
+| Channel Layer | `channels_redis` on same Redis DB 0 | Should use separate Redis DB for channels vs cache |
+| Resource Limits | No `mem_limit` / `cpus` on any service | No container limits set |

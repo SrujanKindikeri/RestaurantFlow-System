@@ -13,6 +13,9 @@ from typing import Optional
 
 from reporting import access as r_access, aggregations as agg
 from reporting.validators import validate_date_range
+from common.caching.services import CacheService
+from common.caching.keys import reporting_key, make_params_hash
+from common.caching.policies import REPORTING_SUMMARY_TTL
 
 logger = logging.getLogger("reporting")
 
@@ -39,7 +42,16 @@ def select_sales_summary(user, date_from, date_to, restaurant_id=None, branch_id
     accessible = r_access.get_accessible_branches(user)
     if restaurant:
         accessible = accessible.filter(restaurant=restaurant)
-    return agg.aggregate_sales_summary(accessible, date_from, date_to, branch)
+    scope_hash = make_params_hash(
+        str(restaurant.pk) if restaurant else None,
+        str(branch.pk) if branch else None,
+    )
+    cache_key = reporting_key("sales_summary", scope_hash, str(date_from), str(date_to))
+    return CacheService.get_or_set(
+        cache_key,
+        lambda: agg.aggregate_sales_summary(accessible, date_from, date_to, branch),
+        REPORTING_SUMMARY_TTL,
+    )
 
 
 def select_sales_trend(user, date_from, date_to, granularity="daily",
@@ -68,7 +80,16 @@ def select_orders_summary(user, date_from, date_to, restaurant_id=None, branch_i
     accessible = r_access.get_accessible_branches(user)
     if restaurant:
         accessible = accessible.filter(restaurant=restaurant)
-    return agg.aggregate_orders_summary(accessible, date_from, date_to, branch)
+    scope_hash = make_params_hash(
+        str(restaurant.pk) if restaurant else None,
+        str(branch.pk) if branch else None,
+    )
+    cache_key = reporting_key("orders_summary", scope_hash, str(date_from), str(date_to))
+    return CacheService.get_or_set(
+        cache_key,
+        lambda: agg.aggregate_orders_summary(accessible, date_from, date_to, branch),
+        REPORTING_SUMMARY_TTL,
+    )
 
 
 def select_orders_by_type(user, date_from, date_to, restaurant_id=None, branch_id=None):
@@ -97,7 +118,17 @@ def select_top_selling_items(user, date_from, date_to, limit=10, sort_by="revenu
     accessible = r_access.get_accessible_branches(user)
     if restaurant:
         accessible = accessible.filter(restaurant=restaurant)
-    return agg.aggregate_top_selling_items(accessible, date_from, date_to, limit, sort_by, branch)
+    scope_hash = make_params_hash(
+        str(restaurant.pk) if restaurant else None,
+        str(branch.pk) if branch else None,
+        limit, sort_by,
+    )
+    cache_key = reporting_key("top_selling_items", scope_hash, str(date_from), str(date_to))
+    return CacheService.get_or_set(
+        cache_key,
+        lambda: agg.aggregate_top_selling_items(accessible, date_from, date_to, limit, sort_by, branch),
+        REPORTING_SUMMARY_TTL,
+    )
 
 
 def select_category_performance(user, date_from, date_to, restaurant_id=None, branch_id=None):
@@ -184,7 +215,16 @@ def select_kitchen_performance(user, date_from, date_to, restaurant_id=None, bra
     accessible = r_access.get_accessible_branches(user)
     if restaurant:
         accessible = accessible.filter(restaurant=restaurant)
-    return agg.aggregate_kitchen_performance(accessible, date_from, date_to, branch)
+    scope_hash = make_params_hash(
+        str(restaurant.pk) if restaurant else None,
+        str(branch.pk) if branch else None,
+    )
+    cache_key = reporting_key("kitchen_performance", scope_hash, str(date_from), str(date_to))
+    return CacheService.get_or_set(
+        cache_key,
+        lambda: agg.aggregate_kitchen_performance(accessible, date_from, date_to, branch),
+        REPORTING_SUMMARY_TTL,
+    )
 
 
 def select_kitchen_items(user, date_from, date_to, restaurant_id=None, branch_id=None):
@@ -226,7 +266,16 @@ def select_inventory_summary(user, restaurant_id=None, branch_id=None):
         accessible = accessible.filter(restaurant=restaurant)
     if branch:
         accessible = accessible.filter(pk=branch.pk)
-    return agg.aggregate_inventory_summary(accessible)
+    scope_hash = make_params_hash(
+        str(restaurant.pk) if restaurant else None,
+        str(branch.pk) if branch else None,
+    )
+    cache_key = reporting_key("inventory_summary", scope_hash, "none", "none")
+    return CacheService.get_or_set(
+        cache_key,
+        lambda: agg.aggregate_inventory_summary(accessible),
+        REPORTING_SUMMARY_TTL,
+    )
 
 
 def select_inventory_consumption(user, date_from, date_to, restaurant_id=None, branch_id=None):

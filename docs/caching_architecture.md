@@ -1,129 +1,121 @@
-# RestaurantFlow Caching Architecture
+# Caching Architecture
 
 ## Overview
 
-The caching layer lives in `backend/common/caching/` and is wired into the
-service and view layers across the application. All Redis access goes through
-`CacheService` — never raw `django.core.cache.cache` calls — so that Redis
-failures are handled uniformly and never propagate to callers as exceptions.
+RestaurantFlow uses Redis (via `django-redis`) as its cache backend for read-heavy, non-financial data. All caching goes through `common/caching/services.py` (`CacheService`) which provides graceful fallback: on Redis failure, reads fall back to the database and writes are silently skipped, so the application remains functional.
 
 ---
 
-## Module layout
+## Key Schema
 
-```
-backend/common/caching/
-    __init__.py        (empty)
-    keys.py            key-builder functions
-    policies.py        TTL constants and jitter helper
-    services.py        CacheService class
-    invalidation.py    invalidation functions (always use transaction.on_commit)
-```
+All keys share the prefix `restaurantflow:`.
 
----
+| Key Pattern | Description |
+|---|---|
+| `restaurantflow:branch:{branch_id}:menu_catalog:{params_hash}` | POS catalog for a branch, parameterised by query filters |
+| `restaurantflow:branch:{branch_id}:config:{key}` | Effective enterprise configuration for a branch |
+| `restaurantflow:restaurant:{restaurant_id}:branch:{branch_id}:dashboard_kpi:{date_str}` | Dashboard KPI payload, scoped to restaurant/branch/day |
+| `restaurantflow:report:{report_type}:{scope_hash}:{date_from}:{date_to}` | Reporting aggregation results |
+| `restaurantflow:user:{user_id}:branch:{branch_id}:permissions` | User permission set (populated separately) |
+| `restaurantflow:branch:{branch_id}:inventory:{item_id}` | Inventory availability for a specific item |
 
-## Cache key schema
+`scope_hash` and `params_hash` are 12-character MD5 hex digests produced by `common.caching.keys.make_params_hash()`.
 
-All keys share the prefix `restaurantflow` and always include an explicit
-tenant-scope component (branch, restaurant, or user ID).
-
-| Data category         | Key pattern                                                          |
-|-----------------------|----------------------------------------------------------------------|
-| Menu catalog          | `restaurantflow:branch:{branch_id}:menu_catalog:{params_hash}`       |
-| Branch config         | `restaurantflow:branch:{branch_id}:config:{key}`                     |
-| User permissions      | `restaurantflow:user:{user_id}:branch:{branch_id}:permissions`       |
-| Dashboard KPIs        | `restaurantflow:restaurant:{rid}:branch:{bid}:dashboard_kpi:{date}`  |
-| Reporting summaries   | `restaurantflow:report:{type}:{scope_hash}:{date_from}:{date_to}`    |
-| Inventory availability| `restaurantflow:branch:{branch_id}:inventory:{item_id}`              |
-
-### Key examples
-
-```
-restaurantflow:branch:550e8400-e29b-41d4-a716-446655440000:menu_catalog:a3f7c9d1e2b4
-restaurantflow:user:42:branch:550e8400:permissions
-restaurantflow:restaurant:1:branch:2:dashboard_kpi:2024-07-15
-restaurantflow:report:sales_trend:u42:r1:b2:2024-07-01:2024-07-15
-```
+The menu catalog and branch config keys are branch-scoped, which is the correct tenant boundary. The reporting and dashboard keys include both restaurant and branch scope to prevent cross-tenant data leaks.
 
 ---
 
-## TTL table
+## TTL Table
 
-| Data category          | TTL      | Constant                   | Reason                                    |
-|------------------------|----------|----------------------------|-------------------------------------------|
-| Menu catalog           | 5 min    | `MENU_CATALOG_TTL = 300`   | Changes infrequently; invalidated on save |
-| Branch config          | 10 min   | `BRANCH_CONFIG_TTL = 600`  | Very stable enterprise config             |
-| User permissions       | 5 min    | `USER_PERMISSIONS_TTL = 300` | Security-sensitive; short TTL            |
-| Dashboard KPIs         | 2 min    | `DASHBOARD_KPI_TTL = 120`  | Near-real-time operational data           |
-| Reporting summaries    | 5 min    | `REPORTING_SUMMARY_TTL = 300` | Analytical queries are expensive        |
-| Inventory availability | 1 min    | `INVENTORY_AVAILABILITY_TTL = 60` | Stock changes rapidly              |
+| Data type | TTL | Constant |
+|---|---|---|
+| Menu catalog | 300 s (5 min) | `MENU_CATALOG_TTL` |
+| Branch config | 600 s (10 min) | `BRANCH_CONFIG_TTL` |
+| User permissions | 300 s (5 min) | `USER_PERMISSIONS_TTL` |
+| Dashboard KPI | 120 s (2 min) | `DASHBOARD_KPI_TTL` |
+| Reporting summary | 300 s (5 min) | `REPORTING_SUMMARY_TTL` |
+| Inventory availability | 60 s (1 min) | `INVENTORY_AVAILABILITY_TTL` |
 
-All TTLs have ±15% random jitter applied by `add_jitter(ttl)` to prevent
-cache stampede when many keys expire simultaneously.
-
----
-
-## Invalidation trigger table
-
-| Model saved/deleted         | Invalidation function called             | Cache keys invalidated                            |
-|-----------------------------|------------------------------------------|---------------------------------------------------|
-| `menu.MenuItem`             | `invalidate_menu_catalog(branch_id)`     | All catalog keys for each branch carrying the item|
-| `menu.MenuItemPrice`        | `invalidate_menu_catalog(branch_id)`     | Catalog keys for the affected branch              |
-| `menu.MenuItemBranch`       | `invalidate_menu_catalog(branch_id)`     | Catalog keys for the affected branch              |
-| `enterprise.EnterpriseConfiguration` | `invalidate_branch_config(branch_id, key)` | Config key for the specific branch/key  |
-| `accounts.UserRoleAssignment` | `invalidate_user_permissions(user_id)` | All permissions keys for the user                 |
-| `inventory.StockBalance`    | `invalidate_inventory_availability(branch_id, item_id)` | Availability key for item at branch |
-
-All invalidations are wrapped in `transaction.on_commit()` so the cache is
-only cleared after the DB transaction commits successfully. Redis failure
-during invalidation is logged as a warning and never causes the DB transaction
-to roll back.
+All TTLs have ±15 % random jitter applied by `common.caching.policies.add_jitter()` to prevent simultaneous cache expiry (stampede protection). `CacheService.get_or_set()` applies jitter automatically; callers do not need to call `add_jitter` themselves.
 
 ---
 
-## Stampede protection
+## Cached Endpoints
 
-`CacheService.get_or_set(key, callable_fn, ttl)` acquires a Redis `SET NX EX`
-lock before calling the expensive `callable_fn`. If the lock cannot be
-acquired (e.g. another worker is already regenerating the value), the caller
-falls through to `callable_fn()` directly — the lock is advisory, not blocking.
-Lock keys are cleaned up in a `finally` block.
-
----
-
-## Redis failure behavior
-
-| Data category     | Redis GET failure behavior                                  |
-|-------------------|-------------------------------------------------------------|
-| Menu catalog      | Graceful fallback: miss treated as cache miss, queries DB   |
-| Dashboard KPIs    | Graceful fallback: miss treated as cache miss, queries DB   |
-| Reporting         | Graceful fallback: miss treated as cache miss, queries DB   |
-| Inventory         | Graceful fallback: miss treated as cache miss, queries DB   |
-| User permissions  | `get_secure()` returns `CACHE_MISS_SENTINEL`; caller **always** goes to DB — Redis failure can never silently grant or deny access |
+| Endpoint | Cache key | TTL |
+|---|---|---|
+| `GET /api/menu/branches/{id}/catalog/` | `menu_catalog_key(branch_id, params_hash)` | `MENU_CATALOG_TTL` |
+| `GET /api/reporting/dashboard/` | `dashboard_kpi_key(user_id, restaurant_id, branch_id, date_str)` | `DASHBOARD_KPI_TTL` |
+| `GET /api/reporting/sales/summary/` | `reporting_key("sales_summary", scope_hash, date_from, date_to)` | `REPORTING_SUMMARY_TTL` |
+| `GET /api/reporting/orders/summary/` | `reporting_key("orders_summary", scope_hash, date_from, date_to)` | `REPORTING_SUMMARY_TTL` |
+| `GET /api/reporting/menu/top-selling/` | `reporting_key("top_selling_items", scope_hash, date_from, date_to)` | `REPORTING_SUMMARY_TTL` |
+| `GET /api/reporting/kitchen/performance/` | `reporting_key("kitchen_performance", scope_hash, date_from, date_to)` | `REPORTING_SUMMARY_TTL` |
+| `GET /api/reporting/inventory/summary/` | `reporting_key("inventory_summary", scope_hash, "none", "none")` | `REPORTING_SUMMARY_TTL` |
+| Enterprise config reads (`ConfigurationResolver`) | `CACHE_KEY_EFFECTIVE_CONFIG` format | `CACHE_TTL_EFFECTIVE_CONFIG` |
 
 ---
 
-## What is NOT cached
+## Explicitly NOT Cached
 
-| Category              | Reason                                                                          |
-|-----------------------|---------------------------------------------------------------------------------|
-| Payment transactions  | Real-time financial state; stale cache could cause double-charge or under-charge |
-| Accounting balances   | Authoritative financial data; correctness is paramount over performance         |
-| Security audit logs   | Append-only immutable records; never read from cache                            |
-| Order status          | High update frequency; cache TTL would exceed business tolerance               |
+The following data is never stored in Redis as authoritative state:
 
-Sentinel constants `PAYMENTS_NO_CACHE = True` and `ACCOUNTING_NO_CACHE = True`
-in `policies.py` document this intent explicitly.
+- **Payments** (`payments.Payment`, `payments.PaymentRefund`) — financial transactions must always read from the database.
+- **Accounting balances** (`accounting.JournalEntry`, balance sheet, P&L) — posted journals are authoritative; stale cache would misrepresent financial state.
+- **Audit logs** (`accounting.AccountingAuditLog`, `payments.PaymentAuditLog`) — immutable records must reflect actual DB state.
+
+`payments/views.py` and `accounting/views.py` contain no `CacheService` calls. This is enforced by code review and CI.
 
 ---
 
-## Adding new cache entries
+## Invalidation Trigger Map
 
-1. Add a TTL constant to `policies.py`.
-2. Add a key-builder function to `keys.py` with tenant-scope in the key.
-3. Use `CacheService.get()` / `CacheService.set()` in the service layer.
-4. For security-sensitive data, use `CacheService.get_secure()` and handle
-   `CACHE_MISS_SENTINEL`.
-5. Add an invalidation function to `invalidation.py` using `transaction.on_commit()`.
-6. Connect a `post_save` / `post_delete` signal in the relevant `signals.py`.
-7. Register the signal handler in the app's `apps.py` `ready()` method.
+Invalidation functions live in `common/caching/invalidation.py`. All of them schedule the actual delete via `transaction.on_commit()`, so cache keys are only removed after the database transaction commits. A transaction rollback leaves the cache untouched.
+
+| Trigger (service function) | Invalidation call | Cache cleared |
+|---|---|---|
+| `menu.services.set_item_active()` | `invalidate_menu_catalog(branch_id)` for every branch of the restaurant | Menu catalog for all affected branches |
+| `menu.services.set_category_active()` | `invalidate_menu_catalog(branch_id)` for every branch of the restaurant | Menu catalog for all affected branches |
+| `menu.services.deactivate_price()` | `invalidate_menu_catalog(branch_id)` | Menu catalog for that branch |
+| `billing.services.finalize_bill()` | `invalidate_dashboard_kpis(restaurant_id, branch_id)` | Dashboard KPI for that restaurant/branch |
+| `enterprise.services.set_configuration()` | `ConfigurationResolver.invalidate_cache_for_config(config)` + `invalidate_branch_config(branch_id)` | Effective config cache (all scopes for the key) + common branch config keys |
+
+### Pattern used for invalidation
+
+`invalidate_menu_catalog(branch_id)` deletes all keys matching `restaurantflow:branch:{branch_id}:menu_catalog:*`, which covers every query-parameter variant cached for that branch.
+
+`invalidate_dashboard_kpis(restaurant_id, branch_id)` deletes `restaurantflow:restaurant:{restaurant_id}:branch:{branch_id}:dashboard_kpi:*`, clearing every date variant.
+
+`invalidate_branch_config(branch_id)` deletes `restaurantflow:branch:{branch_id}:config:*`.
+
+---
+
+## Redis Failure Behavior
+
+| Operation | Failure outcome |
+|---|---|
+| `CacheService.get()` | Returns `None`; caller proceeds to DB |
+| `CacheService.set()` | Silently skipped; next request hits DB |
+| `CacheService.delete()` | Silently skipped; key expires at TTL |
+| `CacheService.delete_pattern()` | Silently skipped; stale data served until natural TTL expiry |
+| `CacheService.get_secure()` | Returns `CACHE_MISS_SENTINEL`; caller must not grant/deny access based on stale data — must go to DB |
+| `CacheService.get_or_set()` | Falls through to callable; result stored if Redis recovers |
+
+Redis failure never rolls back a database transaction. Cache correctness is eventually consistent: after a failure, TTL-based expiry restores consistency within the configured TTL window.
+
+---
+
+## Implementation Files
+
+| File | Role |
+|---|---|
+| `backend/common/caching/services.py` | `CacheService` — all read/write/delete operations |
+| `backend/common/caching/keys.py` | Key builders and `make_params_hash()` |
+| `backend/common/caching/policies.py` | TTL constants and `add_jitter()` |
+| `backend/common/caching/invalidation.py` | `on_commit`-wrapped invalidation helpers |
+| `backend/menu/views.py` | `BranchCatalogView` — menu catalog caching |
+| `backend/menu/services.py` | Invalidation after item/category/price mutations |
+| `backend/reporting/dashboard_services.py` | Dashboard KPI caching via `get_or_set()` |
+| `backend/reporting/selectors.py` | Sales, orders, top items, kitchen, inventory caching |
+| `backend/billing/services.py` | `finalize_bill()` triggers `invalidate_dashboard_kpis()` |
+| `backend/enterprise/services.py` | `set_configuration()` triggers `invalidate_branch_config()` |
+| `backend/enterprise/configuration_resolver.py` | Per-key effective config caching (separate from common layer) |
