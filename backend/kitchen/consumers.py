@@ -119,6 +119,8 @@ class KitchenConsumer(AsyncWebsocketConsumer):
             return
 
         await self.accept()
+        from observability.ws import ws_connect
+        ws_connect("kitchen")
 
         logger.info(
             "KitchenConsumer.connect: user=%s joined group=%s",
@@ -133,6 +135,8 @@ class KitchenConsumer(AsyncWebsocketConsumer):
     # -------------------------------------------------------------------------
 
     async def disconnect(self, close_code):
+        from observability.ws import ws_disconnect
+        ws_disconnect("kitchen")
         """Leave the branch group on disconnect."""
         group_name = getattr(self, "group_name", None)
         if group_name:
@@ -158,6 +162,8 @@ class KitchenConsumer(AsyncWebsocketConsumer):
     # -------------------------------------------------------------------------
 
     async def receive(self, text_data=None, bytes_data=None):
+        from observability.ws import ws_event
+        ws_event("kitchen", "message")
         """
         Handle messages from the KDS client.
         Currently receive-only for heartbeat/ping support.

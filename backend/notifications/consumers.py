@@ -68,6 +68,8 @@ class NotificationsConsumer(AsyncWebsocketConsumer):
         # Join personal group — always the user's own group derived server-side
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
+        from observability.ws import ws_connect
+        ws_connect("notifications")
 
         # Send initial unread count
         await self._send_unread_count()
@@ -82,6 +84,8 @@ class NotificationsConsumer(AsyncWebsocketConsumer):
     # -------------------------------------------------------------------------
 
     async def disconnect(self, close_code):
+        from observability.ws import ws_disconnect
+        ws_disconnect("notifications")
         if hasattr(self, "group_name"):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
         logger.debug(
@@ -94,6 +98,8 @@ class NotificationsConsumer(AsyncWebsocketConsumer):
     # -------------------------------------------------------------------------
 
     async def receive(self, text_data=None, bytes_data=None):
+        from observability.ws import ws_event
+        ws_event("notifications", "message")
         if not text_data:
             return
 

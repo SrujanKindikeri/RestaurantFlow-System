@@ -114,6 +114,8 @@ class CentralControlConsumer(AsyncWebsocketConsumer):
             return
 
         await self.accept()
+        from observability.ws import ws_connect
+        ws_connect("central_control")
 
         logger.info(
             "CentralControlConsumer.connect: user=%s joined group=%s",
@@ -128,6 +130,8 @@ class CentralControlConsumer(AsyncWebsocketConsumer):
     # -------------------------------------------------------------------------
 
     async def disconnect(self, close_code):
+        from observability.ws import ws_disconnect
+        ws_disconnect("central_control")
         """Leave the organization group on disconnect."""
         group_name = getattr(self, "group_name", None)
         if group_name:
@@ -153,6 +157,8 @@ class CentralControlConsumer(AsyncWebsocketConsumer):
     # -------------------------------------------------------------------------
 
     async def receive(self, text_data=None, bytes_data=None):
+        from observability.ws import ws_event
+        ws_event("central_control", "message")
         """
         Handle messages from the Central Control client.
         Supports: ping/pong, sync request.

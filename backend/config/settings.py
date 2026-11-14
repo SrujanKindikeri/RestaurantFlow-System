@@ -333,6 +333,11 @@ CELERY_TIMEZONE = TIME_ZONE
 # Celery Beat — Periodic task schedule (Phase 16: notification maintenance)
 # -----------------------------------------------------------------------------
 CELERY_BEAT_SCHEDULE = {
+    # Phase 24 — Update Celery queue depth gauges (Prometheus metric)
+    "observability-celery-queue-depths": {
+        "task":     "observability.tasks.update_celery_queue_depths",
+        "schedule": 60,  # every minute
+    },
     # Retry pending/due delivery records every 2 minutes
     "notifications-retry-pending-deliveries": {
         "task":     "notifications.retry_pending_deliveries",
