@@ -63,6 +63,14 @@ class CacheService:
         except Exception:
             acquired = True  # fall through to DB on lock failure
 
+        if not acquired:
+            # Another caller holds the lock; re-read the cache before hitting the DB.
+            cached = CacheService.get(key)
+            if cached is not None:
+                return cached
+            # Cache is still empty (the lock holder hasn't written yet or failed);
+            # fall through and compute independently.
+
         try:
             value = callable_fn()
             from .policies import add_jitter

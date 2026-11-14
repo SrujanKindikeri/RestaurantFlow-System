@@ -43,6 +43,7 @@ def select_sales_summary(user, date_from, date_to, restaurant_id=None, branch_id
     if restaurant:
         accessible = accessible.filter(restaurant=restaurant)
     scope_hash = make_params_hash(
+        str(user.pk),
         str(restaurant.pk) if restaurant else None,
         str(branch.pk) if branch else None,
     )
@@ -81,6 +82,7 @@ def select_orders_summary(user, date_from, date_to, restaurant_id=None, branch_i
     if restaurant:
         accessible = accessible.filter(restaurant=restaurant)
     scope_hash = make_params_hash(
+        str(user.pk),
         str(restaurant.pk) if restaurant else None,
         str(branch.pk) if branch else None,
     )
@@ -119,6 +121,7 @@ def select_top_selling_items(user, date_from, date_to, limit=10, sort_by="revenu
     if restaurant:
         accessible = accessible.filter(restaurant=restaurant)
     scope_hash = make_params_hash(
+        str(user.pk),
         str(restaurant.pk) if restaurant else None,
         str(branch.pk) if branch else None,
         limit, sort_by,
@@ -216,6 +219,7 @@ def select_kitchen_performance(user, date_from, date_to, restaurant_id=None, bra
     if restaurant:
         accessible = accessible.filter(restaurant=restaurant)
     scope_hash = make_params_hash(
+        str(user.pk),
         str(restaurant.pk) if restaurant else None,
         str(branch.pk) if branch else None,
     )
@@ -267,6 +271,7 @@ def select_inventory_summary(user, restaurant_id=None, branch_id=None):
     if branch:
         accessible = accessible.filter(pk=branch.pk)
     scope_hash = make_params_hash(
+        str(user.pk),
         str(restaurant.pk) if restaurant else None,
         str(branch.pk) if branch else None,
     )

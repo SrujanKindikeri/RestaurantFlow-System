@@ -4,6 +4,7 @@
 # tenant key isolation, and on_commit invalidation.
 # =============================================================================
 
+from datetime import date
 from unittest.mock import patch, MagicMock
 
 from django.test import TestCase, TransactionTestCase
@@ -129,3 +130,82 @@ class GetSecureSentinelTest(TestCase):
             result = CacheService.get_secure(self.TEST_KEY)
         self.assertIs(result, CACHE_MISS_SENTINEL)
         self.assertIsNot(result, None)
+
+
+class ReportingCacheCrossOrgIsolationTest(TestCase):
+    """
+    Two users from different organizations must never receive each other's
+    cached reporting data, even when both query at org-scope (restaurant=None,
+    branch=None).
+
+    This exercises the specific key-collision scenario fixed in Phase 22:
+    scope_hash is now keyed by user.pk so the two requests produce distinct
+    cache keys.
+    """
+
+    def _make_cache_key_for(self, user):
+        """Return the sales_summary cache key that the selector would generate."""
+        from common.caching.keys import reporting_key, make_params_hash
+        # Mirrors the logic in select_sales_summary with restaurant=None, branch=None
+        scope_hash = make_params_hash(
+            str(user.pk),
+            None,
+            None,
+        )
+        return reporting_key(
+            "sales_summary",
+            scope_hash,
+            str(date(2025, 1, 1)),
+            str(date(2025, 1, 31)),
+        )
+
+    def setUp(self):
+        from accounts.models import User
+        self.user_org_a = User.objects.create_user(
+            email="cache_isolation_a@test.com",
+            password="pass123",
+        )
+        self.user_org_b = User.objects.create_user(
+            email="cache_isolation_b@test.com",
+            password="pass123",
+        )
+
+    def tearDown(self):
+        CacheService.delete(self._make_cache_key_for(self.user_org_a))
+        CacheService.delete(self._make_cache_key_for(self.user_org_b))
+
+    def test_reporting_cache_keys_differ_by_user(self):
+        """Different users must produce different cache keys even with identical scope params."""
+        key_a = self._make_cache_key_for(self.user_org_a)
+        key_b = self._make_cache_key_for(self.user_org_b)
+        self.assertNotEqual(key_a, key_b)
+
+    def test_org_a_data_not_served_to_org_b(self):
+        """Populating cache for user A must not be visible to user B."""
+        key_a = self._make_cache_key_for(self.user_org_a)
+        key_b = self._make_cache_key_for(self.user_org_b)
+
+        # Populate Org A's cached result
+        org_a_data = {"net_sales": "10000.00", "org": "A"}
+        CacheService.set(key_a, org_a_data, ttl=60)
+
+        # Org B's key must be absent
+        result_b = CacheService.get(key_b)
+        self.assertIsNone(result_b, (
+            "User B received User A's cached reporting data — cross-tenant key collision detected."
+        ))
+
+    def test_each_user_gets_own_cached_data(self):
+        """Each user's cache slot is independent and returns only their own data."""
+        key_a = self._make_cache_key_for(self.user_org_a)
+        key_b = self._make_cache_key_for(self.user_org_b)
+
+        CacheService.set(key_a, {"net_sales": "10000.00", "org": "A"}, ttl=60)
+        CacheService.set(key_b, {"net_sales": "5000.00", "org": "B"}, ttl=60)
+
+        result_a = CacheService.get(key_a)
+        result_b = CacheService.get(key_b)
+
+        self.assertEqual(result_a["org"], "A")
+        self.assertEqual(result_b["org"], "B")
+        self.assertNotEqual(result_a, result_b)
