@@ -169,6 +169,14 @@ ALERT_TYPE_CHOICES = [
     ("ROLLOUT_FAILED",                "Rollout Failed"),
     ("ROLLOUT_PARTIAL_FAILURE",       "Rollout Partial Failure"),
     ("STAFF_TRANSFER_EXCEPTION",      "Staff Transfer Exception"),
+    # Phase 25 — Backup & Disaster Recovery
+    ("BACKUP_FAILED",                 "Backup Failed"),
+    ("BACKUP_NOT_VERIFIED",           "Backup Not Verified"),
+    ("BACKUP_STALE",                  "Backup Stale"),
+    ("BACKUP_STORAGE_LOW",            "Backup Storage Low"),
+    ("BACKUP_RESTORE_TEST_FAILED",    "Backup Restore Test Failed"),
+    ("DISASTER_RECOVERY_FAILURE",     "Disaster Recovery Failure"),
+    ("RECOVERY_OBJECTIVE_BREACH",     "Recovery Objective Breach"),
 ]
 
 # Alert types that represent stock-condition alerts (auto-resolve when stock changes)

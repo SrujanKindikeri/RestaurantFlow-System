@@ -90,6 +90,8 @@ LOCAL_APPS = [
     "enterprise",
     # Phase 24 — Monitoring, logging & observability
     "observability",
+    # Phase 25 — Backup, Disaster Recovery & Business Continuity
+    "backup_management",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -382,6 +384,17 @@ CELERY_BEAT_SCHEDULE = {
         "task":     "marketing.cleanup_campaign_data_if_configured",
         "schedule": 86400,  # daily
     },
+    # Phase 25 — Backup staleness check (runs every hour)
+    "backup-check-staleness": {
+        "task":     "backup_management.check_backup_staleness",
+        "schedule": 3600,   # hourly
+    },
+    # Phase 25 — Cleanup expired backup records (runs daily)
+    "backup-cleanup-expired": {
+        "task":     "backup_management.cleanup_expired_backups",
+        "schedule": 86400,  # daily
+        "kwargs":   {"dry_run": False},
+    },
 }
 
 # Use Django database as beat scheduler backend (requires django_celery_beat)
@@ -396,6 +409,7 @@ CELERY_TASK_ROUTES = {
     "notifications.*": {"queue": "notifications"},
     "crm.*":           {"queue": "maintenance"},
     "marketing.*":     {"queue": "maintenance"},
+    "backup_management.*": {"queue": "maintenance"},
 }
 
 # -----------------------------------------------------------------------------

@@ -1,0 +1,31 @@
+# =============================================================================
+# RestaurantFlow — Backup Container Crontab
+# Phase 25
+#
+# This file is mounted into the backup container at /etc/crontabs/root
+# (supercrond format) or /etc/cron.d/restaurantflow (Debian/Alpine cron).
+#
+# All times are UTC.
+# To activate, uncomment the lines you want to run.
+# Credentials are injected via environment variables from docker-compose.backup.yml.
+#
+# Format: minute hour day_of_month month day_of_week command
+# =============================================================================
+
+# Full database backup — daily at 02:00 UTC
+# 0 2 * * * /bin/bash /scripts/backup-database.sh >> /var/log/backup/database.log 2>&1
+
+# Incremental (re-use full script; backup type controlled by DB_BACKUP_TYPE env var)
+# 0 */6 * * * DB_BACKUP_TYPE=DATABASE_INCREMENTAL /bin/bash /scripts/backup-database.sh >> /var/log/backup/database-incr.log 2>&1
+
+# Media backup — daily at 03:00 UTC
+# 0 3 * * * /bin/bash /scripts/backup-media.sh >> /var/log/backup/media.log 2>&1
+
+# Configuration backup — weekly on Sunday at 04:00 UTC
+# 0 4 * * 0 /bin/bash /scripts/backup-configuration.sh >> /var/log/backup/config.log 2>&1
+
+# Retention cleanup — daily at 05:00 UTC
+# 0 5 * * * BACKUP_RETENTION_DAYS=30 /bin/bash /scripts/cleanup-retention.sh --execute >> /var/log/backup/cleanup.log 2>&1
+
+# Health check — every 15 minutes
+# */15 * * * * /bin/bash /scripts/disaster-recovery-check.sh >> /var/log/backup/healthcheck.log 2>&1

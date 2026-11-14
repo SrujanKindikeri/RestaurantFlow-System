@@ -49,6 +49,8 @@ urlpatterns = [
     path("api/", include("operations.urls")),
     # Phase 20 — Multi-Branch Enterprise Operations & Configuration
     path("api/", include("enterprise.urls")),
+    # Phase 25 — Backup, Disaster Recovery & Business Continuity
+    path("api/", include("backup_management.urls")),
 ]
 
 # Serve media files in development

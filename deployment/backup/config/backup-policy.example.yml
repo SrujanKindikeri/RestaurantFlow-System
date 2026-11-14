@@ -1,0 +1,131 @@
+# =============================================================================
+# RestaurantFlow — Backup Policy Configuration Template
+# Phase 25
+#
+# Copy this file to backup-policy.yml and populate values for your deployment.
+# NEVER commit backup-policy.yml with real credentials.
+# Encryption keys and passwords MUST be provided via environment variables.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Backup Schedules (cron expressions — UTC)
+# ---------------------------------------------------------------------------
+schedule:
+  # Full database backup: daily at 02:00 UTC
+  database_full: "0 2 * * *"
+
+  # Incremental database backup: every 6 hours
+  database_incremental: "0 */6 * * *"
+
+  # WAL archiving: continuous (configured in postgresql.conf, not here)
+  # Requires WAL archiving to be enabled — see docs/database_restore.md
+  database_wal: "continuous"
+
+  # Media files backup: daily at 03:00 UTC
+  media: "0 3 * * *"
+
+  # Configuration backup: weekly on Sunday at 04:00 UTC
+  configuration: "0 4 * * 0"
+
+  # Staleness check: hourly
+  staleness_check: "0 * * * *"
+
+  # Retention cleanup: daily at 05:00 UTC
+  retention_cleanup: "0 5 * * *"
+
+# ---------------------------------------------------------------------------
+# Retention Periods
+# ---------------------------------------------------------------------------
+retention:
+  # Full database backups kept for 30 days
+  database_full: 30d
+
+  # Incremental database backups kept for 7 days
+  database_incremental: 7d
+
+  # WAL segments kept for 7 days (pgBackRest/wal-g retention, not managed here)
+  database_wal: 7d
+
+  # Media backups kept for 14 days
+  media: 14d
+
+  # Configuration backups kept for 90 days
+  configuration: 90d
+
+# ---------------------------------------------------------------------------
+# Encryption
+# ---------------------------------------------------------------------------
+encryption:
+  # Algorithm used for backup file encryption
+  algorithm: AES256
+
+  # Key source: "env" means the key is read from BACKUP_ENCRYPTION_KEY env var
+  # Never put the actual key in this file
+  key_source: env
+  key_env_var: BACKUP_ENCRYPTION_KEY
+
+  # Whether to encrypt all backup types
+  encrypt_database: true
+  encrypt_media: false        # Optional — media files are less sensitive than DB
+  encrypt_configuration: false  # Config files should not contain secrets
+
+# ---------------------------------------------------------------------------
+# Storage Backends
+# ---------------------------------------------------------------------------
+storage:
+  local:
+    # Absolute path on the backup container's filesystem
+    path: /backups
+    # Minimum free space in GB before triggering a storage alert
+    min_free_gb: 5
+
+  s3:
+    # S3 bucket name — provide via BACKUP_S3_BUCKET env var
+    bucket: ""  # Set via BACKUP_S3_BUCKET
+    # S3 key prefix for database backups
+    prefix: "restaurantflow/backups"
+    # AWS region
+    region: "us-east-1"
+    # Storage class (STANDARD_IA recommended for backups)
+    storage_class: STANDARD_IA
+    # Credentials via IAM role or AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars
+    credentials_source: iam_role
+
+# ---------------------------------------------------------------------------
+# Recovery Objectives
+# ---------------------------------------------------------------------------
+recovery_objectives:
+  # Recovery Point Objective: target data loss window
+  # NOTE: 15-minute RPO requires WAL archiving — see docs/database_restore.md
+  # With pg_dump only (current), RPO equals the interval between full backups.
+  rpo_target: "15 minutes"
+  rpo_current: "24 hours (pg_dump full backup interval)"
+  rpo_gap: "WAL archiving not yet configured — see docs/database_restore.md"
+
+  # Recovery Time Objective: how long restore takes
+  rto_target: "4 hours"
+  rto_estimate_database: "1-3 hours depending on database size"
+  rto_estimate_media: "30-60 minutes depending on media volume"
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+notifications:
+  # Email addresses for backup status alerts
+  # Actual routing is configured in Django notification settings
+  recipients:
+    - role: system_admin
+      events: [backup_failed, backup_stale, storage_low, verify_failed]
+    - role: operations_manager
+      events: [backup_failed, backup_stale]
+
+# ---------------------------------------------------------------------------
+# Verification
+# ---------------------------------------------------------------------------
+verification:
+  # Automatically verify each backup after completion
+  auto_verify: true
+  # Run a restore test monthly to a non-production database
+  restore_test_schedule: "0 6 1 * *"  # First of each month at 06:00 UTC
+  # Target database for restore tests (must be non-production)
+  restore_test_db: "restaurantflow_restore_test"

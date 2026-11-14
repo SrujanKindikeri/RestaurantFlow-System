@@ -1,0 +1,41 @@
+# =============================================================================
+# RestaurantFlow — Backup Container Dockerfile
+# Phase 25
+#
+# Based on postgres:15-alpine to include pg_dump / pg_restore natively.
+# Adds: bash, gnupg2, python3, supercrond (or busybox crond), awscli.
+#
+# Note on aws-cli:
+#   The official aws-cli v2 binary is ~400MB. This Dockerfile uses the
+#   lightweight aws-cli v1 via pip3 to keep the image manageable.
+#   For production, consider using an IAM role on ECS/EKS instead of keys.
+#
+# Build: docker build -t restaurantflow-backup:latest -f Dockerfile.backup .
+# =============================================================================
+
+FROM postgres:15-alpine
+
+# Install tools
+RUN apk add --no-cache \
+    bash \
+    curl \
+    gnupg \
+    python3 \
+    py3-pip \
+    supercronic \
+    && pip3 install --no-cache-dir awscli \
+    && mkdir -p /backups /scripts /var/log/backup
+
+# Copy backup scripts
+COPY scripts/ /scripts/
+
+# Make scripts executable
+RUN chmod +x /scripts/*.sh
+
+# Copy crontab (commented out by default; operator activates desired entries)
+COPY config/crontab /etc/cron.d/restaurantflow-backup
+
+# Default entrypoint: run supercronic with the crontab file
+# In production, replace CMD to match your chosen cron daemon.
+# supercronic respects standard POSIX cron expressions and exits on error.
+CMD ["/usr/local/bin/supercronic", "/etc/cron.d/restaurantflow-backup"]

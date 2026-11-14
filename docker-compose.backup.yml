@@ -1,0 +1,110 @@
+# =============================================================================
+# RestaurantFlow — Backup Service Compose File
+# Phase 25
+#
+# USAGE:
+#   docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d backup
+#
+# This file adds a standalone backup container that:
+#   - Runs scheduled backup scripts via supercrond
+#   - Connects to the same postgres network as the main stack
+#   - Does NOT depend on the application container
+#   - Mounts postgres_data volume READ-ONLY where possible
+#   - Stores backup files in a dedicated backup_data volume
+#
+# Credentials are injected via environment variables.
+# Never commit a filled-in copy of this file with real secrets.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Backup container
+  # ---------------------------------------------------------------------------
+  backup:
+    build:
+      context: ./deployment/backup
+      dockerfile: Dockerfile.backup
+    container_name: restaurantflow_backup
+    restart: unless-stopped
+
+    # Does NOT depend on the app container — must work independently
+    # so backups continue even during application downtime.
+
+    environment:
+      # PostgreSQL connection — same DB as main stack
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-restaurantflow}
+      DB_USER: ${DB_USER:-restaurantflow}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+
+      # Backup storage
+      BACKUP_LOCAL_DIR: /backups
+      MEDIA_DIR: /media
+
+      # Retention (days)
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+
+      # Encryption — key comes from environment, never hardcoded
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
+
+      # S3 optional offsite storage
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_PREFIX: ${BACKUP_S3_PREFIX:-restaurantflow/backups}
+
+      # Redis AOF backup (optional)
+      BACKUP_REDIS_AOF: ${BACKUP_REDIS_AOF:-false}
+      REDIS_AOF_DIR: /redis_data
+
+    volumes:
+      # Backup output volume
+      - backup_data:/backups
+
+      # Postgres data volume mounted READ-ONLY for potential direct file access.
+      # Note: for logical backups (pg_dump), this volume is not strictly needed
+      # because pg_dump connects via TCP. Keep for PITR / physical backup tools.
+      - postgres_data:/var/lib/postgresql/data:ro
+
+      # Media files volume (read-only for backup purposes)
+      - media_files:/media:ro
+
+      # Redis data for AOF backup
+      - redis_data:/redis_data:ro
+
+      # Mount backup scripts into container
+      - ./deployment/backup/scripts:/scripts:ro
+
+      # Mount crontab configuration
+      - ./deployment/backup/config/crontab:/etc/cron.d/restaurantflow-backup:ro
+
+    networks:
+      - restaurantflow_net
+
+    # Health check: verify the backup container itself is running
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "${DB_HOST:-postgres}", "-U", "${DB_USER:-restaurantflow}"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# =============================================================================
+# Volumes — reuse existing volumes from docker-compose.yml
+# =============================================================================
+volumes:
+  postgres_data:
+    external: true
+  redis_data:
+    external: true
+  backup_data:
+    driver: local
+  media_files:
+    driver: local
+
+# =============================================================================
+# Networks — connect to the main stack network
+# =============================================================================
+networks:
+  restaurantflow_net:
+    external: true

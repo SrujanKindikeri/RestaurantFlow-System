@@ -138,6 +138,13 @@ NOTIFICATION_TYPE_CHOICES = [
     ("ENTERPRISE_STAFF_TRANSFER_REJECTED",  "Staff Transfer Rejected"),
     ("ENTERPRISE_CONFIG_APPROVAL_REQUIRED", "Configuration Approval Required"),
     ("ENTERPRISE_CONFIG_HIGH_IMPACT_CHANGED", "High-Impact Configuration Changed"),
+    # Phase 25 — Backup & Disaster Recovery
+    ("BACKUP_COMPLETED",   "Backup Completed"),
+    ("BACKUP_FAILED",      "Backup Failed"),
+    ("BACKUP_STALE",       "Backup Stale"),
+    ("BACKUP_STORAGE_LOW", "Backup Storage Low"),
+    ("RESTORE_COMPLETED",  "Restore Completed"),
+    ("RESTORE_FAILED",     "Restore Failed"),
 ]
 
 # ---------------------------------------------------------------------------
