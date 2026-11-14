@@ -37,4 +37,5 @@ django-filter==24.3
 
 # Development
 gunicorn==23.0.0
+uvicorn[standard]==0.30.6
 whitenoise==6.7.0
