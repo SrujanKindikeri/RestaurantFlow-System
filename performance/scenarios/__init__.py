@@ -1,0 +1,1 @@
+# RestaurantFlow — Locust scenario package

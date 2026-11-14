@@ -227,12 +227,26 @@ class ConcurrentBillFinalizationTest(TransactionTestCase):
 
     def test_concurrent_bill_finalization_single_winner(self):
         from billing.models import Bill, BillItem, BillStatus
-        from orders.models import Order, OrderStatus, OrderType
+        from orders.models import Order, OrderItem, OrderStatus, OrderType
         from menu.models import MenuItem, Category
 
         branch = self.objects["branch"]
         restaurant = self.objects["restaurant"]
         user = self.objects["user"]
+
+        # Create the minimal menu hierarchy needed for OrderItem
+        category = Category.objects.create(
+            restaurant=restaurant,
+            name="Test Category",
+            slug="test-category-conc",
+        )
+        menu_item = MenuItem.objects.create(
+            restaurant=restaurant,
+            category=category,
+            name="Test Item",
+            slug="test-item-conc",
+            is_active=True,
+        )
 
         order = Order.objects.create(
             branch=branch,
@@ -240,6 +254,15 @@ class ConcurrentBillFinalizationTest(TransactionTestCase):
             order_type=OrderType.COUNTER,
             status=OrderStatus.CONFIRMED,
             created_by=user,
+        )
+
+        order_item = OrderItem.objects.create(
+            order=order,
+            menu_item=menu_item,
+            item_name_snapshot="Test Item",
+            sku_snapshot="SKU-001",
+            unit_price_snapshot=Decimal("50.00"),
+            quantity=Decimal("1"),
         )
 
         bill = Bill.objects.create(
@@ -258,6 +281,8 @@ class ConcurrentBillFinalizationTest(TransactionTestCase):
         # Add a BillItem so finalize_bill passes the "has items" check
         BillItem.objects.create(
             bill=bill,
+            order_item=order_item,
+            menu_item=menu_item,
             item_name_snapshot="Test Item",
             sku_snapshot="SKU-001",
             quantity=Decimal("1"),
@@ -296,3 +321,138 @@ class ConcurrentBillFinalizationTest(TransactionTestCase):
             order=order, status=BillStatus.FINALIZED
         ).count()
         self.assertEqual(finalized_count, 1)
+
+
+class ConcurrentStockTransferTest(TransactionTestCase):
+    """
+    Two threads each attempt to complete the same APPROVED StockTransfer
+    simultaneously.  The select_for_update() guard in complete_stock_transfer
+    must ensure only one succeeds; the second must raise (double-complete
+    is an invalid status transition).
+    """
+
+    def setUp(self):
+        self.objects = _make_base_objects()
+
+    def _make_inventory_fixtures(self):
+        from inventory.models import (
+            InventoryCategory, InventoryItem, StorageLocation, StockBalance,
+        )
+        from accounts.models import Permission, Role, UserRoleAssignment
+
+        restaurant = self.objects["restaurant"]
+        branch = self.objects["branch"]
+        user = self.objects["user"]
+
+        # Second branch for transfer destination
+        from organizations.models import Branch
+        dst_branch = Branch.objects.create(
+            restaurant=restaurant,
+            name="Transfer Dest Branch",
+            code="TDB01",
+        )
+
+        cat = InventoryCategory.objects.create(
+            restaurant=restaurant,
+            name="Dry Goods Transfer",
+        )
+        item = InventoryItem.objects.create(
+            restaurant=restaurant,
+            category=cat,
+            name="Rice Transfer",
+            sku="RICE-CONC-001",
+            default_unit="KG",
+            average_cost=Decimal("50.00"),
+        )
+        src_location = StorageLocation.objects.create(
+            branch=branch,
+            name="Src Store Conc",
+            code="SRC01",
+        )
+        dst_location = StorageLocation.objects.create(
+            branch=dst_branch,
+            name="Dst Store Conc",
+            code="DST01",
+        )
+        StockBalance.objects.create(
+            inventory_item=item,
+            storage_location=src_location,
+            quantity=Decimal("100.000"),
+            average_cost=Decimal("50.00"),
+        )
+
+        # Grant inventory permissions to the superuser actor
+        for code, name in [
+            ("inventory.transfer", "Create/request transfers"),
+            ("inventory.transfer.approve", "Approve/complete transfers"),
+        ]:
+            perm, _ = Permission.objects.get_or_create(
+                code=code,
+                defaults={"name": name, "module": "inventory"},
+            )
+            role, _ = Role.objects.get_or_create(
+                code=f"conc-inv-{code.replace('.', '-')}",
+                defaults={"name": f"Conc {name}", "is_system_role": False},
+            )
+            role.permissions.add(perm)
+            from organizations.models import Organization
+            org = Organization.objects.first()
+            UserRoleAssignment.objects.get_or_create(
+                user=user,
+                organization=org,
+                role=role,
+            )
+
+        return {
+            "item": item,
+            "src_location": src_location,
+            "dst_location": dst_location,
+        }
+
+    def test_concurrent_complete_transfer_single_winner(self):
+        from inventory.services import (
+            create_stock_transfer, request_stock_transfer,
+            approve_stock_transfer, complete_stock_transfer,
+        )
+
+        restaurant = self.objects["restaurant"]
+        user = self.objects["user"]
+        fixtures = self._make_inventory_fixtures()
+        item = fixtures["item"]
+        src = fixtures["src_location"]
+        dst = fixtures["dst_location"]
+
+        transfer = create_stock_transfer(
+            restaurant=restaurant,
+            source_location=src,
+            destination_location=dst,
+            items=[{"inventory_item_id": str(item.pk), "quantity": "30", "unit": "KG"}],
+            user=user,
+        )
+        transfer = request_stock_transfer(transfer, user)
+        transfer = approve_stock_transfer(transfer, user)
+
+        successes = []
+        errors = []
+
+        def complete():
+            try:
+                complete_stock_transfer(transfer, user)
+                successes.append(True)
+            except Exception as e:
+                errors.append(e)
+
+        t1 = threading.Thread(target=complete)
+        t2 = threading.Thread(target=complete)
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        from inventory.models import StockTransfer
+        from inventory.constants import TRANSFER_COMPLETED
+        transfer.refresh_from_db()
+        self.assertEqual(transfer.status, TRANSFER_COMPLETED)
+        # Exactly one must succeed; the second sees an invalid status transition
+        self.assertEqual(len(successes), 1)
+        self.assertEqual(len(errors), 1)

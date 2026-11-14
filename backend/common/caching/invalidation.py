@@ -39,7 +39,7 @@ def invalidate_user_permissions(user_id, branch_id=""):
 def invalidate_dashboard_kpis(restaurant_id, branch_id):
     """Invalidate dashboard KPI cache for a restaurant/branch. Best-effort."""
     def _do():
-        pattern = f"{PREFIX}:restaurant:{restaurant_id}:branch:{branch_id}:dashboard_kpi:*"
+        pattern = f"{PREFIX}:user:*:restaurant:{restaurant_id}:branch:{branch_id}:dashboard_kpi:*"
         CacheService.delete_pattern(pattern)
     transaction.on_commit(_do)
 

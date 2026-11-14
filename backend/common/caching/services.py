@@ -68,8 +68,13 @@ class CacheService:
             cached = CacheService.get(key)
             if cached is not None:
                 return cached
-            # Cache is still empty (the lock holder hasn't written yet or failed);
-            # fall through and compute independently.
+            # Cache is still empty (the lock holder hasn't written yet or failed).
+            # Fall through and compute independently. The lock key remains owned by
+            # the original acquirer and will expire via its 10-second TTL — this is
+            # intentional: the non-acquiring caller never owns the lock and therefore
+            # never cleans it up. The duplicate write is harmless (idempotent value)
+            # and the lock expiry is bounded, so the next cold-cache caller within
+            # that window may also fall through; this is acceptable for availability.
 
         try:
             value = callable_fn()

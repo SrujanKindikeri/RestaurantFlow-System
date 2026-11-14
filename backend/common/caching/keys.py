@@ -18,7 +18,7 @@ def user_permissions_key(user_id, branch_id="") -> str:
     return f"{PREFIX}:user:{user_id}:branch:{branch_id}:permissions"
 
 def dashboard_kpi_key(user_id, restaurant_id, branch_id, date_str="") -> str:
-    return f"{PREFIX}:restaurant:{restaurant_id}:branch:{branch_id}:dashboard_kpi:{date_str}"
+    return f"{PREFIX}:user:{user_id}:restaurant:{restaurant_id}:branch:{branch_id}:dashboard_kpi:{date_str}"
 
 def reporting_key(report_type, scope_hash, date_from, date_to) -> str:
     return f"{PREFIX}:report:{report_type}:{scope_hash}:{date_from}:{date_to}"
