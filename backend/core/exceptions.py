@@ -38,8 +38,14 @@ def custom_exception_handler(exc, context):
             context.get("view"),
         )
     else:
-        # Unhandled exception — return 500
-        logger.error("Unhandled exception: %s | context=%s", str(exc), context, exc_info=True)
+        # Unhandled exception — return 500. Capture via the Phase 24 centralized
+        # error tracker (structured log + optional Sentry). Never leak internals.
+        request = context.get("request") if context else None
+        try:
+            from observability.error_tracking import capture_exception
+            capture_exception(exc, request=request, error_code=exc.__class__.__name__)
+        except Exception:
+            logger.error("Unhandled exception: %s | context=%s", str(exc), context, exc_info=True)
         response = Response(
             {
                 "error": True,

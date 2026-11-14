@@ -1,0 +1,158 @@
+# =============================================================================
+# RestaurantFlow — Prometheus alerting rules
+# Phase 24
+#
+# Thresholds are deliberately conservative defaults; tune per deployment via
+# this file. Fired alerts are routed by Alertmanager into Central Control.
+# Severities map to CentralControl severities: critical|high|warning|info.
+# =============================================================================
+
+groups:
+  - name: restaurantflow-api
+    rules:
+      - alert: RestaurantFlowApiDown
+        expr: up{job="restaurantflow-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RestaurantFlow API is down"
+          description: "Prometheus has not been able to scrape {{ $labels.instance }} for 2 minutes."
+
+      - alert: RestaurantFlowHighErrorRate
+        expr: |
+          sum(rate(restaurantflow_http_errors_total[5m])) by (route)
+            / sum(rate(restaurantflow_http_requests_total[5m])) by (route) > 0.05
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "High API error rate on {{ $labels.route }}"
+          description: "More than 5% of requests on {{ $labels.route }} are returning 5xx for 5 minutes."
+
+      - alert: RestaurantFlowHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(restaurantflow_http_request_duration_seconds_bucket[5m])) by (le, route)
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency on {{ $labels.route }}"
+          description: "p95 request latency on {{ $labels.route }} exceeds 2 seconds for 10 minutes."
+
+  - name: restaurantflow-celery
+    rules:
+      - alert: RestaurantFlowCeleryWorkersDown
+        expr: restaurantflow_celery_worker_up == 0
+        for: 3m
+        labels:
+          severity: high
+        annotations:
+          summary: "Celery worker {{ $labels.hostname }} is down"
+
+      - alert: RestaurantFlowCeleryQueueBacklog
+        expr: restaurantflow_celery_queue_depth > 500
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery queue backlog on {{ $labels.queue }}"
+          description: "Queue {{ $labels.queue }} has exceeded 500 pending tasks for 10 minutes."
+
+      - alert: RestaurantFlowCeleryTaskFailures
+        expr: rate(restaurantflow_celery_task_failures_total[10m]) > 0.5
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Repeated Celery task failures for {{ $labels.task }}"
+
+  - name: restaurantflow-dependencies
+    rules:
+      - alert: RestaurantFlowPostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is unavailable"
+
+      - alert: RestaurantFlowPostgresConnectionSaturation
+        expr: pg_stat_activity_count / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "PostgreSQL connection pool near exhaustion"
+
+      - alert: RestaurantFlowPostgresDeadlocks
+        expr: rate(pg_stat_database_deadlocks[5m]) > 0
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "PostgreSQL deadlocks detected"
+
+      - alert: RestaurantFlowRedisDown
+        expr: redis_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is unavailable"
+
+      - alert: RestaurantFlowRedisMemoryNearLimit
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Redis memory near configured limit"
+
+      - alert: RestaurantFlowRedisHighEvictions
+        expr: rate(redis_evicted_keys_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis evicting keys at a high rate"
+
+  - name: restaurantflow-infrastructure
+    rules:
+      - alert: RestaurantFlowHostDiskNearlyFull
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 10m
+        labels:
+          severity: high
+        annotations:
+          summary: "Host disk nearly full"
+
+      - alert: RestaurantFlowHostCpuSaturation
+        expr: |
+          (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host CPU saturation"
+
+      - alert: RestaurantFlowContainerRestarting
+        expr: rate(container_cpu_system_seconds_total[5m]) == 0 and changes(container_last_seen[10m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container repeatedly restarting"
+
+      - alert: RestaurantFlowCertNearingExpiry
+        expr: |
+          (probe_ssl_earliest_cert_expiry - time()) / 86400 < 14
+        for: 1h
+        labels:
+          severity: high
+        annotations:
+          summary: "TLS certificate nearing expiry"
+          description: "A probed TLS certificate expires in less than 14 days."

@@ -39,3 +39,21 @@ django-filter==24.3
 gunicorn==23.0.0
 uvicorn[standard]==0.30.6
 whitenoise==6.7.0
+
+# =============================================================================
+# Phase 24 — Observability (OPTIONAL dependencies)
+# The metrics registry is dependency-free (pure Python). The packages below
+# are only required to ACTIVATE distributed tracing and external error
+# tracking; the application runs without them. Uncomment + install to enable.
+# =============================================================================
+# OpenTelemetry distributed tracing (set OTEL_EXPORTER_OTLP_ENDPOINT to enable):
+# opentelemetry-sdk==1.27.0
+# opentelemetry-exporter-otlp-proto-http==1.27.0
+# opentelemetry-instrumentation-django==0.48b0
+# opentelemetry-instrumentation-psycopg2==0.48b0
+# opentelemetry-instrumentation-redis==0.48b0
+# opentelemetry-instrumentation-celery==0.48b0
+# opentelemetry-instrumentation-requests==0.48b0
+#
+# Sentry external error tracking (set SENTRY_DSN to enable):
+# sentry-sdk==2.14.0

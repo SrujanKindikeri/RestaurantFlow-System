@@ -1,0 +1,218 @@
+# =============================================================================
+# RestaurantFlow — Monitoring Stack (optional overlay)
+# Phase 24: Prometheus + Grafana + Alertmanager + exporters
+#
+# Usage (merged on top of the production stack):
+#   docker compose -f docker-compose.yml \
+#     -f docker-compose.prod.yml \
+#     -f deployment/monitoring/docker-compose.monitoring.yml \
+#     --profile monitoring up -d
+#
+# Requires the same .env.prod that drives the production stack (DB_PASSWORD,
+# REDIS_PASSWORD, PROMETHEUS_SCRAPE_TOKEN, ALERTMANAGER_WEBHOOK_TOKEN, ...).
+#
+# Design constraints:
+#   - Exporters and Prometheus/Alertmanager are NOT published to the host; they
+#     live on the internal compose network. Only Grafana is bound to the host
+#     loopback (127.0.0.1:3000) and requires authentication.
+#   - Resource limits keep the stack usable on a small production server.
+#   - Persistent volumes retain metric/history data across restarts.
+#   - The Docker socket is mounted READ-ONLY into cAdvisor only (it needs it to
+#     inspect containers) and is never given to Prometheus/Grafana/Alertmanager.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Prometheus — scrape + store metrics + evaluate alert rules
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: restaurantflow_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"
+      - "--web.enable-lifecycle=false"
+      - "--web.enable-admin-api=false"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - ./prometheus/secrets:/etc/prometheus/secrets:ro
+      - prometheus_data:/prometheus
+    networks: [default]
+    expose: ["9090"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # Alertmanager — route metric-based alerts to the backend webhook
+  # ---------------------------------------------------------------------------
+  alertmanager:
+    image: prom/alertmanager:v0.27.1
+    container_name: restaurantflow_alertmanager
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager/secrets:/etc/alertmanager/secrets:ro
+      - alertmanager_data:/alertmanager
+    networks: [default]
+    expose: ["9093"]
+    depends_on: [backend]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # Grafana — dashboards (loopback-only, requires login)
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: restaurantflow_grafana
+    restart: unless-stopped
+    environment:
+      # Security: enforce admin credentials from env, disable anonymous access,
+      # and do not allow sign-up.
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks: [default]
+    ports:
+      - "127.0.0.1:3000:3000"   # loopback only; front with Nginx + auth for remote access
+    depends_on: [prometheus]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Node Exporter — host CPU / memory / disk / network metrics
+  # ---------------------------------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: restaurantflow_node_exporter
+    restart: unless-stopped
+    command:
+      - "--path.rootfs=/host"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/rootfs:ro
+    networks: [default]
+    expose: ["9100"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64M
+
+  # ---------------------------------------------------------------------------
+  # cAdvisor — per-container CPU / memory / restart metrics
+  # Docker socket mounted READ-ONLY (cAdvisor needs it to inspect containers).
+  # ---------------------------------------------------------------------------
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: restaurantflow_cadvisor
+    restart: unless-stopped
+    volumes:
+      - /:/host/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/host/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [default]
+    expose: ["8080"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Exporter — connections, latency, locks, deadlocks, size
+  # ---------------------------------------------------------------------------
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: restaurantflow_postgres_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DB_USER:-restaurantflow}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-restaurantflow}?sslmode=disable"
+    networks: [default]
+    expose: ["9187"]
+    depends_on: [postgres]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64M
+
+  # ---------------------------------------------------------------------------
+  # Redis Exporter — memory, clients, hit/miss, evictions, latency
+  # ---------------------------------------------------------------------------
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.66.0
+    container_name: restaurantflow_redis_exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    networks: [default]
+    expose: ["9121"]
+    depends_on: [redis]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64M
+
+  # ---------------------------------------------------------------------------
+  # Blackbox Exporter — endpoint availability (health/readiness, TLS)
+  # ---------------------------------------------------------------------------
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: restaurantflow_blackbox
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/blackbox/blackbox.yml"
+    volumes:
+      - ./exporters/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    networks: [default]
+    expose: ["9115"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 32M
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:

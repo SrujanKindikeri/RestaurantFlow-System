@@ -10,8 +10,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ToastProvider } from '@/components/ui/Toast'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { installGlobalErrorReporter } from '@/utils/errorReporting'
 import App from './App'
 import './index.css'
+
+// Phase 24 — capture uncaught frontend errors before the app renders so even
+// boot-time failures are reported. Reports only safe, truncated diagnostics.
+installGlobalErrorReporter()
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -88,6 +88,8 @@ LOCAL_APPS = [
     "operations",
     # Phase 20 — Multi-Branch Enterprise Operations & Configuration
     "enterprise",
+    # Phase 24 — Monitoring, logging & observability
+    "observability",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -97,6 +99,10 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # -----------------------------------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Phase 24 — request correlation (binds X-Request-ID + structured-log context)
+    "observability.middleware.RequestCorrelationMiddleware",
+    # Phase 24 — API metrics (count/latency/errors); never breaks a request
+    "observability.middleware.MetricsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -212,6 +218,8 @@ THROTTLE_RATES = {
     "sensitive_op": os.getenv("THROTTLE_SENSITIVE_OP", "60/hour"),
     "export": os.getenv("THROTTLE_EXPORT", "20/hour"),
     "search": os.getenv("THROTTLE_SEARCH", "120/hour"),
+    # Phase 24 — anonymous frontend error reporting
+    "frontend_errors": os.getenv("THROTTLE_FRONTEND_ERRORS", "120/min"),
 }
 
 REST_FRAMEWORK = {
@@ -458,6 +466,9 @@ AUDIT_RETENTION_DAYS = int(os.getenv("AUDIT_RETENTION_DAYS", "365"))
 # Logging
 # -----------------------------------------------------------------------------
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG" if DEBUG else "INFO")
+# Phase 24 — "json" emits structured JSON logs (for log collectors like Loki);
+# "text" keeps the existing human-readable format (default in dev/test).
+LOG_FORMAT = os.getenv("LOG_FORMAT", "text").lower()
 LOGS_DIR = BASE_DIR / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
 
@@ -473,6 +484,10 @@ LOGGING = {
             "format": "{levelname} {asctime} {module} {message}",
             "style": "{",
         },
+        # Phase 24 — structured JSON for log aggregation / correlation.
+        "json": {
+            "()": "observability.logging_config.StructuredJsonFormatter",
+        },
     },
     "filters": {
         "require_debug_true": {
@@ -481,12 +496,23 @@ LOGGING = {
         "require_debug_false": {
             "()": "django.utils.log.RequireDebugFalse",
         },
+        # Phase 24 — injects request_id + safe tenant scope into every record.
+        "contextual": {
+            "()": "observability.logging_config.ContextualLogFilter",
+        },
     },
     "handlers": {
         "console": {
             "level": LOG_LEVEL,
             "class": "logging.StreamHandler",
-            "formatter": "simple",
+            "formatter": "json" if LOG_FORMAT == "json" else "simple",
+            "filters": ["contextual"],
+        },
+        "json_console": {
+            "level": LOG_LEVEL,
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "filters": ["contextual"],
         },
         "file_general": {
             "level": "INFO",
@@ -582,9 +608,41 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
+        # Phase 24 — Observability & monitoring
+        "observability": {
+            "handlers": ["console", "file_general", "file_errors"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
     },
     "root": {
         "handlers": ["console"],
         "level": "WARNING",
     },
 }
+
+# =============================================================================
+# Phase 24 — Observability configuration
+# =============================================================================
+OBSERVABILITY_SERVICE_NAME = os.getenv("OBSERVABILITY_SERVICE_NAME", "restaurantflow-api")
+OBSERVABILITY_ENVIRONMENT = os.getenv("OBSERVABILITY_ENVIRONMENT", "production" if not DEBUG else "development")
+
+# Prometheus scrape token (header X-Prometheus-Token). Empty = metrics refused
+# in production (DEBUG allows unauthenticated scraping for local dev).
+PROMETHEUS_SCRAPE_TOKEN = os.getenv("PROMETHEUS_SCRAPE_TOKEN", "")
+
+# Alertmanager webhook token (header X-Alertmanager-Token). Required to accept
+# forwarded metric-based alerts into Central Control.
+ALERTMANAGER_WEBHOOK_TOKEN = os.getenv("ALERTMANAGER_WEBHOOK_TOKEN", "")
+
+# Organization that owns monitoring/alerts in multi-tenant deployments.
+OBSERVABILITY_MONITORING_ORG_ID = os.getenv("OBSERVABILITY_MONITORING_ORG_ID", "")
+
+# Distributed tracing (OpenTelemetry). Activated only when the OTel packages
+# are installed AND OTEL_EXPORTER_OTLP_ENDPOINT is set. See tracing.py.
+OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+
+# External error tracking (Sentry). Activated only when sentry-sdk is
+# installed AND SENTRY_DSN is set. Otherwise local structured logging is the
+# authoritative error record (documented limitation).
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")

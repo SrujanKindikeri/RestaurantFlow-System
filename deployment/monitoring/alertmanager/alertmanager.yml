@@ -1,0 +1,52 @@
+# =============================================================================
+# RestaurantFlow — Alertmanager configuration
+# Phase 24
+#
+# Groups related alerts, suppresses lower-severity noise, and forwards metric
+# alerts into RestaurantFlow Central Control via the authenticated webhook.
+#
+# Token provisioning: Alertmanager does NOT interpolate env vars in its config,
+# so the webhook token is read from a mounted secret file:
+#   /etc/alertmanager/secrets/webhook_token
+# Provision it at deploy time (see monitoring_operations.md) and keep it
+# out of the repository (gitignored).
+# =============================================================================
+
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: restaurantflow-central-control
+  group_by: ["alertname", "instance"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity = "critical"
+      receiver: restaurantflow-central-control
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: false
+    - matchers:
+        - severity = "high"
+      receiver: restaurantflow-central-control
+      repeat_interval: 2h
+      continue: false
+
+receivers:
+  - name: restaurantflow-central-control
+    webhook_configs:
+      - url: "http://backend:8000/api/observability/alerts/am"
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/alertmanager/secrets/webhook_token
+
+# Inhibit: when a critical parent alert is firing, suppress its child warnings.
+inhibit_rules:
+  - source_matchers:
+      - severity = "critical"
+    target_matchers:
+      - severity = "warning"
+    equal: ["alertname", "instance"]

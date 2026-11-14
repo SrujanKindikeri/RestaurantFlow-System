@@ -1,0 +1,25 @@
+# =============================================================================
+# RestaurantFlow — Grafana datasource provisioning
+# Phase 24
+# =============================================================================
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 30s
+      httpMethod: POST
+
+  # Optional: add a Loki datasource here once the logging stack
+  # (deployment/monitoring/docker-compose.logging.yml) is enabled. Until then
+  # logs are queried via the structured JSON files / Loki is not provisioned.
+  # - name: Loki
+  #   type: loki
+  #   access: proxy
+  #   url: http://loki:3100

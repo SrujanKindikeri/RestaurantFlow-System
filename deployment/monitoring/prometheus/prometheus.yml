@@ -1,0 +1,76 @@
+# =============================================================================
+# RestaurantFlow — Prometheus configuration
+# Phase 24
+#
+# The token is interpolated from the environment (PROMETHEUS_SCRAPE_TOKEN) at
+# runtime via the docker-compose env_file. Targets live on the internal network.
+# =============================================================================
+
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  evaluation_interval: 30s
+
+# Forward firing/resolved alerts to Alertmanager, which in turn forwards them
+# into RestaurantFlow Central Control via the authenticated webhook.
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+# Metric-based alerting rules (see rules/alerting_rules.yml).
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # ---------------------------------------------------------------------------
+  # RestaurantFlow Django API (/metrics) — token-gated.
+  # The token is sent as Authorization: Bearer by Prometheus.
+  # ---------------------------------------------------------------------------
+  - job_name: "restaurantflow-api"
+    scheme: http
+    # Token read from a mounted secret file (Prometheus does not interpolate
+    # env vars in its config). Provision /etc/prometheus/secrets/scrape_token
+    # at deploy time (gitignored) — see monitoring_operations.md.
+    bearer_token_file: /etc/prometheus/secrets/scrape_token
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:8000"]
+        labels:
+          service: restaurantflow-api
+
+  # Host metrics
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # Per-container metrics
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # PostgreSQL
+  - job_name: "postgres-exporter"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # Redis
+  - job_name: "redis-exporter"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  # Endpoint availability / TLS cert expiry probes
+  - job_name: "blackbox-health"
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://backend:8000/health/ready/
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

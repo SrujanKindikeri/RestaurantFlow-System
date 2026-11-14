@@ -121,3 +121,9 @@ dump.rdb
 *.temp
 tmp/
 temp/
+
+# Phase 24 — monitoring secret files (token files must never be committed)
+deployment/monitoring/prometheus/secrets/*
+!deployment/monitoring/prometheus/secrets/.gitkeep
+deployment/monitoring/alertmanager/secrets/*
+!deployment/monitoring/alertmanager/secrets/.gitkeep

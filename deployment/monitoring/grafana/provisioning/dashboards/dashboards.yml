@@ -1,0 +1,19 @@
+# =============================================================================
+# RestaurantFlow — Grafana dashboard provider
+# Phase 24
+# Dashboards are loaded from /var/lib/grafana/dashboards (mounted read-only).
+# =============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: restaurantflow
+    orgId: 1
+    folder: RestaurantFlow
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

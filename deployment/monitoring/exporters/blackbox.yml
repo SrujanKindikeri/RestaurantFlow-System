@@ -1,0 +1,17 @@
+# =============================================================================
+# RestaurantFlow — Blackbox exporter modules
+# Phase 24
+# Probes the application health endpoint over HTTP and inspects TLS certs.
+# =============================================================================
+
+modules:
+  http_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      preferred_ip_protocol: ip4
+      ip_protocol_fallback: true
+      follow_redirects: false
