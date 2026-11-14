@@ -1,0 +1,13 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    "Audit log event mismatch — EVENT_USER_CREATED is used to record organization creation, conflating org-creation events with user-creation events. Use EVENT_SECURITY_ALERT with a descriptive metadata[\"action\"], or add EVENT_ORGANIZATION_CREATED.",
+    "Missing test: Restaurant Owner without organization.create → 403. The brief requires this scenario (scenario 5); the existing unauthorized-user test uses a plain user with no role, not a Restaurant Owner.",
+    "Missing test: audit log entry written on successful creation (scenario 11). No test asserts SecurityAuditLog.objects.filter(metadata__action=\"organization_created\").exists().",
+    "Missing test: atomic rollback when perform_create fails after serializer.save() (scenario 12). The @transaction.atomic added in this diff has no test coverage.",
+    "Serializer fallback returns None instead of 0. get_restaurant_count uses a conditional expression that returns None when restaurant_count_annotated is present but None. Use the or-chaining pattern from RestaurantSerializer instead.",
+    "Soft test assertion on restaurant-list isolation. test_restaurant_list_for_org_a_returns_org_a_restaurants_only accepts (200, 404); scoped queryset behavior is deterministic and should assert only HTTP_404_NOT_FOUND.",
+    "Frontend error type cast suppresses future type safety. The catch block casts err to a plain object; replace with Axios isAxiosError guard and AxiosError<Record<string, unknown>> to prevent silent fallback when a non-object error body is received."
+  ],
+  "reviewDoc": "c:\\Users\\kindi\\OneDrive\\Documents\\RestaurantFlow-System\\.agents\\tasks\\fix-org-403\\review.md"
+}

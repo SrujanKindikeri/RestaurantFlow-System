@@ -66,8 +66,8 @@ def get_organization_queryset(request=None):
     Everyone else      → only organizations accessible via their role assignments.
     """
     base_qs = Organization.objects.annotate(
-        restaurant_count=Count("restaurants"),
-        active_restaurant_count=Count(
+        restaurant_count_annotated=Count("restaurants"),
+        active_restaurant_count_annotated=Count(
             "restaurants", filter=Q(restaurants__is_active=True)
         ),
     )
