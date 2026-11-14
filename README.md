@@ -448,27 +448,27 @@ RestaurantFlow follows a 26-phase development roadmap.
 | 3 | ✅ Completed | Authentication, Users, Roles and Permissions |
 | 4 | ✅ Completed | Counters and Cash Sessions |
 | 5 | ✅ Completed | Menu, Categories, Branch Pricing, Availability and Tax |
-| 6 | 🔜 Planned | Tables, Orders and POS |
-| 7 | 🔜 Planned | Kitchen Display System |
-| 8 | 🔜 Planned | Billing and Invoice Management |
-| 9 | 🔜 Planned | Payments and Refunds |
-| 10 | 🔜 Planned | Inventory and Stock Management |
-| 11 | 🔜 Planned | Recipes and Inventory Consumption |
-| 12 | 🔜 Planned | Expenses and Financial Operations |
-| 13 | 🔜 Planned | Accounting and Double-Entry Bookkeeping |
-| 14 | 🔜 Planned | Reports, Analytics and Business Intelligence |
-| 15 | 🔜 Planned | Central Control Center |
-| 16 | 🔜 Planned | Notifications and Communication |
-| 17 | 🔜 Planned | Customer CRM, Loyalty and Feedback |
-| 18 | 🔜 Planned | Marketing and Campaign Management |
-| 19 | 🔜 Planned | Advanced POS and Restaurant Operations |
-| 20 | 🔜 Planned | Multi-Branch Enterprise Operations |
-| 21 | 🔜 Planned | Security, Audit and Compliance Hardening |
-| 22 | 🔜 Planned | Performance and Scalability |
-| 23 | 🔜 Planned | DevOps and Production Deployment |
-| 24 | 🔜 Planned | Monitoring and Observability |
-| 25 | 🔜 Planned | Backup and Disaster Recovery |
-| 26 | 🔜 Planned | Final Integration, QA and Production Release |
+| 6 | ✅ Completed | Tables, Orders and POS |
+| 7 | ✅ Completed | Kitchen Display System |
+| 8 | ✅ Completed | Billing and Invoice Management |
+| 9 | ✅ Completed | Payments and Refunds |
+| 10 | 🔜 ✅ Completed | Inventory and Stock Management |
+| 11 | 🔜 ✅ Completed | Recipes and Inventory Consumption |
+| 12 | 🔜 ✅ Completed | Expenses and Financial Operations |
+| 13 | 🔜 ✅ Completed | Accounting and Double-Entry Bookkeeping |
+| 14 | 🔜 ✅ Completed | Reports, Analytics and Business Intelligence |
+| 15 | 🔜 ✅ Completed | Central Control Center |
+| 16 | 🔜 ✅ Completed | Notifications and Communication |
+| 17 | 🔜 ✅ Completed | Customer CRM, Loyalty and Feedback |
+| 18 | 🔜 ✅ Completed | Marketing and Campaign Management |
+| 19 | 🔜 ✅ Completed | Advanced POS and Restaurant Operations |
+| 20 | 🔜 ✅ Completed | Multi-Branch Enterprise Operations |
+| 21 | 🔜 ✅ Completed | Security, Audit and Compliance Hardening |
+| 22 | 🔜 ✅ Completed | Performance and Scalability |
+| 23 | 🔜 ✅ Completed | DevOps and Production Deployment |
+| 24 | 🔜 ✅ Completed | Monitoring and Observability |
+| 25 | 🔜 ✅ Completed | Backup and Disaster Recovery |
+| 26 | 🔜 ✅ Completed | Final Integration, QA and Production Release |
 
 **Status definitions:**
 
