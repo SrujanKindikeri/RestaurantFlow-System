@@ -316,6 +316,10 @@ class OrderSerializer(serializers.ModelSerializer):
         return obj.assigned_waiter.full_name if obj.assigned_waiter else None
 
     def get_item_count(self, obj):
+        # Use the annotated value from the list queryset to avoid a per-row DB hit.
+        # Falls back to the model property for single-instance contexts (detail, create).
+        if hasattr(obj, "items_count"):
+            return obj.items_count
         return obj.items.count()
 
     def get_preview_total(self, obj):

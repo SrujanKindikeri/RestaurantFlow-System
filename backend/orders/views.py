@@ -39,7 +39,7 @@
 
 import logging
 
-from django.db.models import Q
+from django.db.models import Count, Q
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -411,7 +411,7 @@ class OrderListCreateView(generics.ListCreateAPIView):
 
         return qs.select_related(
             'branch', 'created_by', 'assigned_waiter', 'table', 'counter'
-        ).prefetch_related("items")
+        ).prefetch_related("items").annotate(items_count=Count("items"))
 
     def create(self, request, *args, **kwargs):
         serializer = CreateOrderSerializer(data=request.data)

@@ -346,6 +346,7 @@ class Expense(TimestampedModel):
             models.Index(fields=["created_by"]),
             models.Index(fields=["status", "created_at"]),
             models.Index(fields=["expense_number"]),
+            models.Index(fields=["branch", "status", "expense_date"], name="expense_branch_status_date"),
         ]
 
     def __str__(self):

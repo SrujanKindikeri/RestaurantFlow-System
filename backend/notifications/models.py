@@ -153,6 +153,10 @@ class Notification(TimestampedModel):
                 fields=["branch", "notification_type", "created_at"],
                 name="notif_branch_type_created_idx",
             ),
+            models.Index(
+                fields=["company", "branch", "source_type", "source_id", "notification_type"],
+                name="notif_idempotency_check",
+            ),
         ]
 
     def __str__(self):

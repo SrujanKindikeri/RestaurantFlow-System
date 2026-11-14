@@ -297,7 +297,7 @@ class MenuItemListCreateView(generics.ListCreateAPIView):
         return MenuItemSerializer
 
     def get_queryset(self):
-        return menu_acl.get_accessible_menu_items(self.request.user)
+        return menu_acl.get_accessible_menu_items(self.request.user).prefetch_related("prices", "branch_availability")
 
     def perform_create(self, serializer):
         restaurant = serializer.validated_data.get("restaurant")

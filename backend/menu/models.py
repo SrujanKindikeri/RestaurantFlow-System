@@ -284,6 +284,7 @@ class MenuItem(TimestampedModel):
             models.Index(fields=["restaurant", "food_type"]),
             models.Index(fields=["restaurant", "slug"]),
             models.Index(fields=["restaurant", "sku"]),
+            models.Index(fields=["restaurant", "is_active", "display_order"], name="menuitem_catalog_order"),
         ]
 
     def __str__(self):

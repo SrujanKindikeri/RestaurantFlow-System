@@ -481,6 +481,7 @@ class Order(TimestampedModel):
             models.Index(fields=["status", "created_at"]),
             models.Index(fields=["customer", "status"]),
             models.Index(fields=["customer", "created_at"]),
+            models.Index(fields=["branch", "status", "created_at"], name="order_branch_status_created_at"),
         ]
 
     def __str__(self):
